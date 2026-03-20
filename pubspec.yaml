@@ -1,0 +1,50 @@
+name: Doma
+description: "A camote (sweet potato) classification app using ML."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  permission_handler: ^11.3.1   # add this line
+
+
+  cupertino_icons: ^1.0.8
+
+  # ML Model Inference
+  tflite_flutter: ^0.12.1
+
+  # Image handling
+  image: ^4.7.2
+  image_picker: ^1.0.7
+  camera: ^0.10.6
+
+  # Local storage
+  shared_preferences: ^2.3.2
+  path_provider: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/orange_camote.jpg
+    - assets/images/purple_camote.jpg
+    - assets/images/white_camote.jpg
+    - assets/images/yellow_camote.jpg
+    - assets/model.tflite
+    - assets/icon/app_icon.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  min_sdk_android: 21
+  image_path: "assets/icon/app_icon.png"
