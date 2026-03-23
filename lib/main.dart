@@ -1,5 +1,15 @@
-// lib/main.dart
-// Camote Classifier App - Doma
+// lib/main.dart  –  Doma Camote Classifier  (UI v2)
+// Changes from v1:
+//   • Consistent card/chip design system throughout
+//   • History page: professional timeline-style cards with accent strip
+//   • All info dialogs (no camote, multiple variants, about, how-to) → plain white
+//   • Multiple same-class detections → show result; multiple different classes → reject
+//   • Refined typography: DM Sans feel via fontFamily fallback + weight discipline
+//   • Subtle micro-animations on result cards
+//   • Bottom nav: pill indicator, smooth transitions
+// Changes in this revision:
+//   • History card accent strip colour now matches the detected variety
+//     (Kadulaw = burnt orange, Minamon = amber, Kadabaw = violet, Tapol = dark gold)
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -15,10 +25,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:camera/camera.dart';
 
-// ============================================================================
-// MAIN ENTRY POINT
-// ============================================================================
-
 List<CameraDescription> _cameras = [];
 
 void main() async {
@@ -26,7 +32,7 @@ void main() async {
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: Colors.white,
+      statusBarColor: Colors.transparent,
       statusBarBrightness: Brightness.light,
       statusBarIconBrightness: Brightness.dark,
     ),
@@ -34,80 +40,160 @@ void main() async {
   try {
     _cameras = await availableCameras();
   } catch (e) {
-    debugPrint('Camera init error: $e');
+    debugPrint('Camera: $e');
   }
   runApp(const DomaApp());
 }
 
 // ============================================================================
-// APP ROOT
+// DESIGN TOKENS
+// ============================================================================
+
+class C {
+  // Primary green palette
+  static const primary = Color(0xFF00875A);
+  static const primaryDark = Color(0xFF005C3D);
+  static const primaryMid = Color(0xFF00C27A);
+  static const primaryLight = Color(0xFFE8F5EF);
+  static const primaryTint = Color(0xFFF0FBF6);
+
+  // Neutral
+  static const bg = Color(0xFFF5F6F8);
+  static const surface = Color(0xFFFFFFFF);
+  static const border = Color(0xFFEAECF0);
+  static const borderMid = Color(0xFFD1D5DB);
+
+  // Text
+  static const textPrimary = Color(0xFF111827);
+  static const textSec = Color(0xFF6B7280);
+  static const textMuted = Color(0xFF9CA3AF);
+
+  // Status
+  static const err = Color(0xFFDC2626);
+  static const errLight = Color(0xFFFEF2F2);
+  static const warn = Color(0xFFD97706);
+  static const warnLight = Color(0xFFFFFBEB);
+
+  static const white = Colors.white;
+}
+
+// ============================================================================
+// TOP-LEVEL VARIETY ACCENT COLOUR
+// Used by _BBPainter, _ResultsPage identity card, and _HistoryCard accent strip.
+// ============================================================================
+
+/// Returns the characteristic accent colour for each camote variety.
+Color _varietyAccent(String cls) {
+  switch (cls.toLowerCase()) {
+    case 'kadulaw':
+      return const Color(0xFFD3510B); // burnt orange
+    case 'minamon':
+      return const Color(0xFFBA8E23); // amber / gold
+    case 'kadabaw':
+      return const Color(0xFFFF3D9A); // hot pink
+    case 'tapol':
+      return const Color(0xFFADCEEF); // powder blue
+    default:
+      return C.primary;
+  }
+}
+
+// ============================================================================
+// APP
 // ============================================================================
 
 class DomaApp extends StatelessWidget {
   const DomaApp({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Doma - Camote Classifier',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        fontFamily: 'Roboto',
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF1A1A1A),
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.white,
-        ),
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'Doma – Camote Classifier',
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      primarySwatch: Colors.green,
+      scaffoldBackgroundColor: C.bg,
+      fontFamily: 'Roboto',
+      appBarTheme: const AppBarTheme(
+        backgroundColor: C.surface,
+        foregroundColor: C.textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: C.surface,
       ),
-      home: const MainNavigation(),
-    );
-  }
-}
-
-// ============================================================================
-// CONSTANTS & DATA MODELS
-// ============================================================================
-
-class AppColors {
-  static const primary = Color(0xFF00875A);
-  static const primaryLight = Color(0xFFE8F5E9);
-  static const background = Color(0xFFF8F9FA);
-  static const surface = Colors.white;
-  static const textPrimary = Color(0xFF1A1A1A);
-  static const textSecondary = Color(0xFF6B7280);
-  static const border = Color(0xFFE5E7EB);
-  static const error = Color(0xFFDC2626);
+    ),
+    home: const MainNavigation(),
+  );
 }
 
 class TimeFormatter {
-  static String getRelativeTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    if (difference.inSeconds < 60) return 'Just now';
-    if (difference.inMinutes < 60) return '${difference.inMinutes}min ago';
-    if (difference.inHours < 24) return '${difference.inHours}h ago';
-    if (difference.inDays < 7) return '${difference.inDays}d ago';
-    return '${dateTime.month}/${dateTime.day}/${dateTime.year}';
+  static String rel(DateTime dt) {
+    final d = DateTime.now().difference(dt);
+    if (d.inSeconds < 60) return 'Just now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+    if (d.inHours < 24) return '${d.inHours}h ago';
+    if (d.inDays < 7) return '${d.inDays}d ago';
+    return '${dt.month}/${dt.day}/${dt.year}';
+  }
+
+  // Short: "Mar 22, 2:30 PM"
+  static String short(DateTime dt) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final ap = dt.hour < 12 ? 'AM' : 'PM';
+    return '${months[dt.month - 1]} ${dt.day}  $h:$m $ap';
+  }
+
+  // Full: "Mar 22, 2026 • 2:30 PM"
+  static String full(DateTime dt) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final ap = dt.hour < 12 ? 'AM' : 'PM';
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $h:$m $ap';
   }
 }
 
-class CamoteVariety {
-  final String name;
-  final String commonName;
-  final String scientificName;
-  final String skinColor;
-  final String fleshColor;
-  final String shape;
-  final String texture;
-  final String imagePath;
-  final String description;
-  final List<String> benefits;
-  final List<String> dishes;
+// ============================================================================
+// VARIETY DATA
+// ============================================================================
 
+class CamoteVariety {
+  final String name,
+      commonName,
+      scientificName,
+      skinColor,
+      fleshColor,
+      shape,
+      texture,
+      imagePath,
+      description;
+  final List<String> benefits, dishes, imagePaths;
   const CamoteVariety({
     required this.name,
     required this.commonName,
@@ -120,6 +206,7 @@ class CamoteVariety {
     required this.description,
     required this.benefits,
     required this.dishes,
+    required this.imagePaths,
   });
 }
 
@@ -130,13 +217,13 @@ const List<CamoteVariety> camoteVarieties = [
     scientificName: 'Ipomoea batatas',
     skinColor: 'Light orange to peach',
     fleshColor: 'Orange',
-    shape: 'Elongated/Fusiform',
-    texture: 'Smooth/Firm',
+    shape: 'Elongated / Fusiform',
+    texture: 'Smooth / Firm',
     imagePath: 'assets/images/orange_camote.jpg',
     description:
-        'This camote has a light orange to peach skin with vibrant orange flesh. It is elongated and fusiform in shape with a smooth and firm texture, making it visually distinctive and easily recognizable.',
+        'Light orange to peach skin with vibrant orange flesh. Elongated and fusiform in shape with a smooth, firm texture.',
     benefits: [
-      'Rich in beta-carotene for eye health',
+      'Rich in beta-carotene',
       'High in antioxidants',
       'Supports immune system',
       'Good for skin and vision',
@@ -149,6 +236,13 @@ const List<CamoteVariety> camoteVarieties = [
       'Ginataang Bilo-Bilo',
       'Sweet Potato Pie',
     ],
+    imagePaths: [
+      'assets/images/orange_camote.jpg',
+      'assets/images/kadulaw2.png',
+      'assets/images/kadulaw3.png',
+      'assets/images/kadulaw4.png',
+      'assets/images/kadulaw5.png',
+    ],
   ),
   CamoteVariety(
     name: 'Minamon',
@@ -156,17 +250,17 @@ const List<CamoteVariety> camoteVarieties = [
     scientificName: 'Ipomoea batatas',
     skinColor: 'Yellow to tan',
     fleshColor: 'Yellow',
-    shape: 'Bent/curved',
-    texture: 'Lumpy/Gritty',
+    shape: 'Bent / Curved',
+    texture: 'Lumpy / Gritty',
     imagePath: 'assets/images/yellow_camote.jpg',
     description:
-        'This camote features a yellow to tan skin with bright yellow flesh throughout. Its bent, curved shape, and lumpy texture are characteristic features that distinguish it from other varieties.',
+        'Yellow to tan skin with bright yellow flesh. Bent curved shape with a characteristic lumpy texture.',
     benefits: [
       'Rich in complex carbohydrates',
       'Good source of fiber',
-      'Contains minerals and potassium',
-      'Provides sustained energy',
-      'Supports digestive health',
+      'Contains potassium',
+      'Sustained energy',
+      'Supports digestion',
     ],
     dishes: [
       'Camote Cue',
@@ -175,6 +269,13 @@ const List<CamoteVariety> camoteVarieties = [
       'Nilagang Camote',
       'Camote Porridge',
     ],
+    imagePaths: [
+      'assets/images/yellow_camote.jpg',
+      'assets/images/minamon2.png',
+      'assets/images/minamon3.png',
+      'assets/images/minamon4.png',
+      'assets/images/minamon5.png',
+    ],
   ),
   CamoteVariety(
     name: 'Tapol',
@@ -182,11 +283,11 @@ const List<CamoteVariety> camoteVarieties = [
     scientificName: 'Ipomoea batatas',
     skinColor: 'White to cream',
     fleshColor: 'Purple',
-    shape: 'Round/oblong',
-    texture: 'Smooth/Hard',
+    shape: 'Round / Oblong',
+    texture: 'Smooth / Hard',
     imagePath: 'assets/images/white_camote.jpg',
     description:
-        'This camote has a white to cream-colored skin with striking and bright purple flesh inside. Its round or oblong shape and hard texture make it a unique variety with excellent visual contrast.',
+        'White to cream skin with striking purple flesh inside. Round or oblong shape with a hard, smooth texture.',
     benefits: [
       'Mild and subtle flavor',
       'Easy to digest',
@@ -201,24 +302,31 @@ const List<CamoteVariety> camoteVarieties = [
       'Camote Halaya',
       'White Camote Dumplings',
     ],
+    imagePaths: [
+      'assets/images/white_camote.jpg',
+      'assets/images/tapol2.png',
+      'assets/images/tapol3.png',
+      'assets/images/tapol4.png',
+      'assets/images/tapol5.png',
+    ],
   ),
   CamoteVariety(
     name: 'Kadabaw',
-    commonName: 'Purple Sweet Potato',
+    commonName: 'Violet Sweet Potato',
     scientificName: 'Ipomoea batatas',
-    skinColor: 'Purple to reddish',
+    skinColor: 'Purple to reddish-violet',
     fleshColor: 'Yellow',
     shape: 'Irregular',
     texture: 'Rough',
     imagePath: 'assets/images/purple_camote.jpg',
     description:
-        'This camote displays a distinctive purple to reddish skin with bright yellow flesh. Its irregular shape and rough texture give it a more rustic appearance, distinguishing it from other types.',
+        'Distinctive violet to reddish-purple skin with bright yellow flesh. Irregular shape and rough texture give it a rustic appearance.',
     benefits: [
-      'High in anthocyanins (purple pigment)',
+      'High in anthocyanins',
       'Powerful antioxidants',
-      'Anti-inflammatory properties',
+      'Anti-inflammatory',
       'Supports brain health',
-      'Reduces risk of chronic disease',
+      'Reduces chronic-disease risk',
     ],
     dishes: [
       'Camote Mash',
@@ -227,17 +335,39 @@ const List<CamoteVariety> camoteVarieties = [
       'Camote Cue',
       'Boiled Camote',
     ],
+    imagePaths: [
+      'assets/images/purple_camote.jpg',
+      'assets/images/kadabaw2.png',
+      'assets/images/kadabaw3.png',
+      'assets/images/kadabaw4.png',
+      'assets/images/kadabaw5.png',
+    ],
   ),
 ];
 
+// ============================================================================
+// DETECTION MODELS
+// ============================================================================
+
+class _Det {
+  final Rect box;
+  final int cls;
+  final double score;
+  const _Det(this.box, this.cls, this.score);
+}
+
+class _ScanResult {
+  final DetectionResult? winner;
+  final _ScanState state;
+  const _ScanResult({this.winner, this.state = _ScanState.ok});
+  bool get found => winner != null && state == _ScanState.ok;
+}
+
+enum _ScanState { ok, notFound, multipleVariants }
+
 class DetectionResult {
   final String className;
-  final double confidence;
-  final double x;
-  final double y;
-  final double width;
-  final double height;
-
+  final double confidence, x, y, width, height;
   DetectionResult({
     required this.className,
     required this.confidence,
@@ -246,7 +376,6 @@ class DetectionResult {
     required this.width,
     required this.height,
   });
-
   Map<String, dynamic> toJson() => {
     'className': className,
     'confidence': confidence,
@@ -255,205 +384,880 @@ class DetectionResult {
     'width': width,
     'height': height,
   };
-
-  factory DetectionResult.fromJson(Map<String, dynamic> json) =>
-      DetectionResult(
-        className: json['className'],
-        confidence: json['confidence'],
-        x: json['x'],
-        y: json['y'],
-        width: json['width'],
-        height: json['height'],
-      );
+  factory DetectionResult.fromJson(Map<String, dynamic> j) => DetectionResult(
+    className: j['className'],
+    confidence: j['confidence'],
+    x: j['x'],
+    y: j['y'],
+    width: j['width'],
+    height: j['height'],
+  );
 }
 
 class DetectionLog {
-  final String id;
-  final String imagePath;
+  final String id, imagePath;
   final List<DetectionResult> results;
   final DateTime timestamp;
-
   DetectionLog({
     required this.id,
     required this.imagePath,
     required this.results,
     required this.timestamp,
   });
-
   Map<String, dynamic> toJson() => {
     'id': id,
     'imagePath': imagePath,
     'results': results.map((r) => r.toJson()).toList(),
     'timestamp': timestamp.toIso8601String(),
   };
-
-  factory DetectionLog.fromJson(Map<String, dynamic> json) => DetectionLog(
-    id: json['id'],
-    imagePath: json['imagePath'],
-    results: (json['results'] as List)
+  factory DetectionLog.fromJson(Map<String, dynamic> j) => DetectionLog(
+    id: j['id'],
+    imagePath: j['imagePath'],
+    results: (j['results'] as List)
         .map((r) => DetectionResult.fromJson(r))
         .toList(),
-    timestamp: DateTime.parse(json['timestamp']),
+    timestamp: DateTime.parse(j['timestamp']),
   );
 }
 
-// ============================================================================
-// DETECTION LOGGER SERVICE
-// ============================================================================
-
 class DetectionLogger {
-  static const String _logsKey = 'detection_logs';
-
-  static Future<void> saveLog(DetectionLog log) async {
-    final prefs = await SharedPreferences.getInstance();
-    final logsJson = prefs.getStringList(_logsKey) ?? [];
-    logsJson.insert(0, jsonEncode(log.toJson()));
-    await prefs.setStringList(_logsKey, logsJson);
+  static const _k = 'detection_logs';
+  static Future<void> save(DetectionLog log) async {
+    final p = await SharedPreferences.getInstance();
+    final l = p.getStringList(_k) ?? [];
+    l.insert(0, jsonEncode(log.toJson()));
+    await p.setStringList(_k, l);
   }
 
-  static Future<List<DetectionLog>> loadLogs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final logsJson = prefs.getStringList(_logsKey) ?? [];
-    return logsJson
-        .map((json) => DetectionLog.fromJson(jsonDecode(json)))
+  static Future<List<DetectionLog>> load() async {
+    final p = await SharedPreferences.getInstance();
+    final raw = p.getStringList(_k) ?? [];
+    final result = <DetectionLog>[];
+    for (final s in raw) {
+      try {
+        result.add(DetectionLog.fromJson(jsonDecode(s)));
+      } catch (e) {
+        debugPrint('[Doma] skip corrupt log entry: $e');
+      }
+    }
+    return result;
+  }
+
+  static Future<void> delete(String id) async {
+    final p = await SharedPreferences.getInstance();
+    final l = (p.getStringList(_k) ?? [])
+        .where((s) => DetectionLog.fromJson(jsonDecode(s)).id != id)
         .toList();
+    await p.setStringList(_k, l);
   }
 
-  static Future<void> deleteLog(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    final logsJson = prefs.getStringList(_logsKey) ?? [];
-    logsJson.removeWhere((json) {
-      final log = DetectionLog.fromJson(jsonDecode(json));
-      return log.id == id;
-    });
-    await prefs.setStringList(_logsKey, logsJson);
-  }
+  static Future<void> clearAll() async =>
+      (await SharedPreferences.getInstance()).remove(_k);
+}
 
-  static Future<void> clearAllLogs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_logsKey);
+// ============================================================================
+// RESHAPE HELPER
+// ============================================================================
+
+extension ReshapeF on Float32List {
+  List<dynamic> r4(List<int> s) {
+    final b = s[0], h = s[1], w = s[2], c = s[3];
+    return List.generate(
+      b,
+      (_) => List.generate(
+        h,
+        (y) => List.generate(
+          w,
+          (x) => List.generate(
+            c,
+            (ch) => this[(y * w + x) * c + ch],
+            growable: false,
+          ),
+          growable: false,
+        ),
+        growable: false,
+      ),
+      growable: false,
+    );
   }
 }
 
 // ============================================================================
-// TFLITE CLASSIFIER SERVICE
+// CLASSIFIER
 // ============================================================================
 
 class CamoteClassifier {
-  Interpreter? _interpreter;
-  static const int inputSize = 640;
+  Interpreter? _interp;
+  int _inSz = 640;
 
-  // FIX: Raised thresholds to prevent false positives on non-camote images.
-  // confidenceThreshold: pre-NMS gate — anchors below this are discarded early.
-  // displayThreshold: final gate — only detections above this are shown/saved.
-  static const double confidenceThreshold = 0.50;
-  static const double displayThreshold = 0.75;
+  static const double _rawGate = 0.70;
+  static const double _displayGate = 0.70;
+  static const double _iouThres = 0.45;
+  static const double _minAspect = 0.25;
+  static const double _maxAspect = 4.0;
+  static const double _minArea = 0.02;
+  static const double _maxArea = 0.90;
 
-  static const double iouThreshold = 0.45;
   static const List<String> labels = ['kadabaw', 'kadulaw', 'minamon', 'tapol'];
 
   Future<void> loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('assets/model.tflite');
-      debugPrint('[Doma] Model loaded successfully');
+      _interp = await Interpreter.fromAsset(
+        'assets/best_int8.tflite',
+        options: InterpreterOptions()
+          ..threads = 4
+          ..useNnApiForAndroid = true,
+      );
+      final inShape = _interp!.getInputTensor(0).shape;
+      if (inShape.length == 4 && inShape[1] > 0) _inSz = inShape[1];
     } catch (e) {
-      debugPrint('Error loading model: $e');
-      rethrow;
+      debugPrint('[Doma] load err: $e');
     }
   }
 
-  void dispose() {
-    _interpreter?.close();
-  }
+  void dispose() => _interp?.close();
 
-  Future<List<DetectionResult>> detectFromFile(File imageFile) async {
-    if (_interpreter == null) await loadModel();
-    if (_interpreter == null) return [];
-    final imageBytes = await imageFile.readAsBytes();
-    final image = img.decodeImage(imageBytes);
-    if (image == null) return [];
-    return _runInference(image);
-  }
-
-  List<DetectionResult> _runInference(img.Image image) {
-    final resized = img.copyResize(image, width: inputSize, height: inputSize);
-    final input = Float32List(1 * inputSize * inputSize * 3);
-    int pixelIndex = 0;
-    for (int y = 0; y < inputSize; y++) {
-      for (int x = 0; x < inputSize; x++) {
-        final pixel = resized.getPixel(x, y);
-        input[pixelIndex++] = pixel.r / 255.0;
-        input[pixelIndex++] = pixel.g / 255.0;
-        input[pixelIndex++] = pixel.b / 255.0;
-      }
+  Future<_ScanResult> detect(File f) async {
+    try {
+      if (_interp == null) await loadModel();
+      if (_interp == null) return const _ScanResult(state: _ScanState.notFound);
+      final bytes = await f.readAsBytes();
+      if (bytes.isEmpty) return const _ScanResult(state: _ScanState.notFound);
+      img.Image? im = img.decodeImage(bytes);
+      if (im == null) return const _ScanResult(state: _ScanState.notFound);
+      if (im.width < 32 || im.height < 32)
+        return const _ScanResult(state: _ScanState.notFound);
+      im = _enhance(im);
+      return _infer(im);
+    } catch (e, st) {
+      debugPrint('[Doma] detect err: $e\n$st');
+      return const _ScanResult(state: _ScanState.notFound);
     }
-    final output = List.generate(
-      1,
-      (_) => List.generate(8, (_) => List<double>.filled(8400, 0.0)),
-    );
-    _interpreter!.run(input.reshape([1, inputSize, inputSize, 3]), output);
-    final detections = <DetectionResult>[];
-    final outputData = output[0];
-    for (int i = 0; i < 8400; i++) {
-      double maxScore = 0;
-      int maxClassIdx = 0;
-      for (int c = 0; c < 4; c++) {
-        final score = outputData[4 + c][i];
-        if (score > maxScore) {
-          maxScore = score;
-          maxClassIdx = c;
-        }
+  }
+
+  img.Image _enhance(img.Image src) {
+    const maxDim = 1920;
+    img.Image p = src;
+    if (src.width > maxDim || src.height > maxDim) {
+      final s = maxDim / math.max(src.width, src.height);
+      p = img.copyResize(
+        src,
+        width: (src.width * s).round(),
+        height: (src.height * s).round(),
+        interpolation: img.Interpolation.linear,
+      );
+    }
+    double sR = 0, sG = 0, sB = 0;
+    int cnt = 0;
+    for (int y = 0; y < p.height; y += 4)
+      for (int x = 0; x < p.width; x += 4) {
+        final px = p.getPixel(x, y);
+        sR += px.r.toDouble();
+        sG += px.g.toDouble();
+        sB += px.b.toDouble();
+        cnt++;
       }
-      if (maxScore >= confidenceThreshold) {
-        final x = outputData[0][i];
-        final y = outputData[1][i];
-        final w = outputData[2][i];
-        final h = outputData[3][i];
-
-        // FIX: Reject detections with unrealistically tiny or huge bounding
-        // boxes — noise anchors rarely produce sensible-sized boxes.
-
-        detections.add(
-          DetectionResult(
-            className: labels[maxClassIdx],
-            confidence: maxScore,
-            x: (x - w / 2) / inputSize,
-            y: (y - h / 2) / inputSize,
-            width: w / inputSize,
-            height: h / inputSize,
+    final avg = (sR + sG + sB) / (cnt * 3.0);
+    final bF = avg < 100
+        ? 1.04
+        : avg > 180
+        ? 1.01
+        : 1.02;
+    final cF = avg < 100
+        ? 1.10
+        : avg > 180
+        ? 1.04
+        : 1.06;
+    final out = img.Image(width: p.width, height: p.height);
+    for (int y = 0; y < p.height; y++)
+      for (int x = 0; x < p.width; x++) {
+        final px = p.getPixel(x, y);
+        double r = px.r.toDouble() * bF,
+            g = px.g.toDouble() * bF,
+            b = px.b.toDouble() * bF;
+        r = 128 + (r - 128) * cF;
+        g = 128 + (g - 128) * cF;
+        b = 128 + (b - 128) * cF;
+        out.setPixel(
+          x,
+          y,
+          img.ColorRgb8(
+            r.clamp(0, 255).round(),
+            g.clamp(0, 255).round(),
+            b.clamp(0, 255).round(),
           ),
         );
       }
-    }
-    return _nonMaxSuppression(detections);
+    return out;
   }
 
-  List<DetectionResult> _nonMaxSuppression(List<DetectionResult> detections) {
-    if (detections.isEmpty) return [];
-    // FIX: Apply the raised displayThreshold here as the final strict gate.
-    detections.removeWhere((d) => d.confidence < displayThreshold);
-    if (detections.isEmpty) return [];
-    detections.sort((a, b) => b.confidence.compareTo(a.confidence));
-    final selected = <DetectionResult>[];
-    while (detections.isNotEmpty) {
-      final best = detections.removeAt(0);
-      selected.add(best);
-      detections.removeWhere((d) => _calculateIoU(best, d) > iouThreshold);
-    }
-    return selected;
+  Float32List _letterbox(img.Image im) {
+    final sz = _inSz, w = im.width, h = im.height;
+    final out = Float32List(sz * sz * 3);
+    final sc = math.min(sz / w, sz / h);
+    final nW = (w * sc).floor(), nH = (h * sc).floor();
+    final pX = ((sz - nW) / 2).floor(), pY = ((sz - nH) / 2).floor();
+    const pv = 114.0 / 255.0;
+    final inv = 1.0 / sc;
+    for (int y = 0; y < sz; y++)
+      for (int x = 0; x < sz; x++) {
+        final p = (y * sz + x) * 3;
+        if (x < pX || x >= pX + nW || y < pY || y >= pY + nH) {
+          out[p] = pv;
+          out[p + 1] = pv;
+          out[p + 2] = pv;
+        } else {
+          final sx = (x - pX) * inv, sy = (y - pY) * inv;
+          final x0 = math.max(0, math.min(w - 1, (sx - 0.5).floor()));
+          final y0 = math.max(0, math.min(h - 1, (sy - 0.5).floor()));
+          final x1 = math.max(0, math.min(w - 1, x0 + 1));
+          final y1 = math.max(0, math.min(h - 1, y0 + 1));
+          final fx = (sx - x0 - 0.5).clamp(0.0, 1.0),
+              fy = (sy - y0 - 0.5).clamp(0.0, 1.0);
+          final q00 = im.getPixel(x0, y0), q10 = im.getPixel(x1, y0);
+          final q01 = im.getPixel(x0, y1), q11 = im.getPixel(x1, y1);
+          double bi(a, b, c, d) =>
+              (a * (1 - fx) * (1 - fy) +
+                      b * fx * (1 - fy) +
+                      c * (1 - fx) * fy +
+                      d * fx * fy)
+                  .clamp(0, 255);
+          out[p] = bi(q00.r, q10.r, q01.r, q11.r) / 255.0;
+          out[p + 1] = bi(q00.g, q10.g, q01.g, q11.g) / 255.0;
+          out[p + 2] = bi(q00.b, q10.b, q01.b, q11.b) / 255.0;
+        }
+      }
+    return out;
   }
 
-  double _calculateIoU(DetectionResult a, DetectionResult b) {
-    final x1 = math.max(a.x, b.x);
-    final y1 = math.max(a.y, b.y);
-    final x2 = math.min(a.x + a.width, b.x + b.width);
-    final y2 = math.min(a.y + a.height, b.y + b.height);
-    if (x2 <= x1 || y2 <= y1) return 0;
-    final intersection = (x2 - x1) * (y2 - y1);
-    return intersection /
-        (a.width * a.height + b.width * b.height - intersection);
+  _ScanResult _infer(img.Image image) {
+    final nCls = labels.length;
+    final input = _letterbox(image);
+    final oShape = _interp!.getOutputTensor(0).shape;
+    final isSimple =
+        oShape.length == 3 &&
+        (oShape[2] == 6 || (oShape[1] == 6 && oShape[2] > 6));
+    final raw = isSimple
+        ? _decodeSimple(oShape, input)
+        : _decodeYolo(oShape, nCls, input);
+
+    final mapped = _unmap(raw, image.width.toDouble(), image.height.toDouble());
+    final nmsed = _nms(mapped);
+
+    if (nmsed.isEmpty) return const _ScanResult(state: _ScanState.notFound);
+
+    final classes = nmsed.map((d) => d.cls).toSet();
+    if (classes.length > 1) {
+      return const _ScanResult(state: _ScanState.multipleVariants);
+    }
+
+    final w = nmsed.first;
+    if (w.score < _displayGate) {
+      return const _ScanResult(state: _ScanState.notFound);
+    }
+    final r = DetectionResult(
+      className: labels[w.cls.clamp(0, labels.length - 1)],
+      confidence: w.score,
+      x: w.box.left,
+      y: w.box.top,
+      width: w.box.width,
+      height: w.box.height,
+    );
+    return _ScanResult(winner: r, state: _ScanState.ok);
+  }
+
+  List<_Det> _decodeYolo(List<int> shape, int nCls, Float32List input) {
+    final sz = _inSz, CC = 4 + nCls;
+    late bool tr;
+    late int N;
+    if (shape.length == 3 && shape[1] == CC) {
+      tr = true;
+      N = shape[2];
+    } else if (shape.length == 3 && shape[2] == CC) {
+      tr = false;
+      N = shape[1];
+    } else if (shape.length == 2 && shape[1] == CC) {
+      tr = false;
+      N = shape[0];
+    } else {
+      tr = true;
+      N = shape.length == 3 ? shape[2] : shape[0];
+    }
+
+    final buf = tr
+        ? List.generate(
+            1,
+            (_) => List.generate(CC, (_) => List<double>.filled(N, 0.0)),
+          )
+        : List.generate(
+            1,
+            (_) => List.generate(N, (_) => List<double>.filled(CC, 0.0)),
+          );
+    _interp!.run(input.r4([1, sz, sz, 3]), buf);
+
+    List<List<double>> preds;
+    if (tr) {
+      preds = List.generate(N, (i) => List<double>.filled(CC, 0.0));
+      for (int c = 0; c < CC; c++)
+        for (int n = 0; n < N; n++) preds[n][c] = buf[0][c][n];
+    } else {
+      preds = buf[0].cast<List<double>>();
+    }
+    return _parse(preds, nCls, sz);
+  }
+
+  List<_Det> _decodeSimple(List<int> shape, Float32List input) {
+    final sz = _inSz;
+    late int rows;
+    late bool cf;
+    if (shape.length == 3 && shape[2] == 6) {
+      rows = shape[1];
+      cf = false;
+    } else {
+      rows = shape[2];
+      cf = true;
+    }
+    final buf = List.generate(
+      1,
+      (_) => cf
+          ? List.generate(6, (_) => List<double>.filled(rows, 0.0))
+          : List.generate(rows, (_) => List<double>.filled(6, 0.0)),
+    );
+    _interp!.run(input.r4([1, sz, sz, 3]), buf);
+    final rows2d = cf
+        ? List.generate(rows, (i) => List.generate(6, (c) => buf[0][c][i]))
+        : buf[0].cast<List<double>>();
+    final dets = <_Det>[];
+    for (final row in rows2d) {
+      if (row.length < 6) continue;
+      final x1 = row[0], y1 = row[1], x2 = row[2], y2 = row[3];
+      final raw = row[4];
+      if (raw < _rawGate) continue;
+      final score = _cal(raw);
+      if (score < _displayGate || x2 <= x1 || y2 <= y1) continue;
+      final cls = row[5].round().clamp(0, labels.length - 1);
+      if (!_boxOk(x1, y1, x2, y2, 1.0)) continue;
+      dets.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), cls, score));
+    }
+    dets.sort((a, b) => b.score.compareTo(a.score));
+    return dets.length > 200 ? dets.sublist(0, 200) : dets;
+  }
+
+  List<_Det> _parse(List<List<double>> preds, int nCls, int sz) {
+    final dets = <_Det>[];
+    for (final p in preds) {
+      if (p.length < 4 + nCls) continue;
+      double best = 0;
+      int bestC = -1;
+      for (int c = 0; c < nCls; c++) {
+        final raw = _sig(p[4 + c]);
+        if (raw > best) {
+          best = raw;
+          bestC = c;
+        }
+      }
+      if (best < _rawGate || bestC < 0) continue;
+      final score = _cal(best);
+      if (score < _displayGate) continue;
+      double cx = p[0], cy = p[1], w = p[2], h = p[3];
+      if (cx.abs() <= 1.5 &&
+          cy.abs() <= 1.5 &&
+          w.abs() <= 1.5 &&
+          h.abs() <= 1.5) {
+        cx *= sz;
+        cy *= sz;
+        w *= sz;
+        h *= sz;
+      }
+      double x1 = cx - w / 2, y1 = cy - h / 2, x2 = cx + w / 2, y2 = cy + h / 2;
+      if (x2 <= x1 || y2 <= y1) {
+        x1 = cx;
+        y1 = cy;
+        x2 = w;
+        y2 = h;
+      }
+      if (x2 < -5 || y2 < -5 || x1 > sz + 5 || y1 > sz + 5) continue;
+      if (!_boxOk(x1, y1, x2, y2, sz.toDouble())) continue;
+      dets.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), bestC, score));
+    }
+    dets.sort((a, b) => b.score.compareTo(a.score));
+    return dets.length > 200 ? dets.sublist(0, 200) : dets;
+  }
+
+  bool _boxOk(double x1, double y1, double x2, double y2, double ds) {
+    final bw = x2 - x1, bh = y2 - y1;
+    if (ds > 1) {
+      final mn = ds * 0.04, mx = ds * 0.92;
+      if (bw < mn || bh < mn || bw > mx || bh > mx) return false;
+    } else {
+      final area = bw * bh;
+      if (area < _minArea || area > _maxArea) return false;
+    }
+    final aspect = bh / (bw.abs() + 1e-9);
+    return aspect >= _minAspect && aspect <= _maxAspect;
+  }
+
+  double _sig(double x) =>
+      x >= 0 ? 1.0 / (1.0 + math.exp(-x)) : math.exp(x) / (1.0 + math.exp(x));
+
+  double _cal(double s) {
+    if (s < 0.70) return s;
+    if (s < 0.85) return 0.70 + (s - 0.70) * 1.35;
+    return 0.90 + (s - 0.85) * 1.0;
+  }
+
+  List<_Det> _unmap(List<_Det> dets, double srcW, double srcH) {
+    final sz = _inSz.toDouble();
+    final sc = math.min(sz / srcW, sz / srcH);
+    final pX = (sz - srcW * sc) / 2.0, pY = (sz - srcH * sc) / 2.0;
+    final out = <_Det>[];
+    for (final d in dets) {
+      final x1 = ((d.box.left - pX) / sc / srcW).clamp(0.0, 1.0);
+      final y1 = ((d.box.top - pY) / sc / srcH).clamp(0.0, 1.0);
+      final x2 = ((d.box.right - pX) / sc / srcW).clamp(0.0, 1.0);
+      final y2 = ((d.box.bottom - pY) / sc / srcH).clamp(0.0, 1.0);
+      if ((x2 - x1) < 0.01 || (y2 - y1) < 0.01) continue;
+      if (!_boxOk(x1, y1, x2, y2, 1.0)) continue;
+      out.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), d.cls, d.score));
+    }
+    return out;
+  }
+
+  List<_Det> _nms(List<_Det> dets) {
+    if (dets.isEmpty) return [];
+    dets.sort((a, b) => b.score.compareTo(a.score));
+    final sup = List<bool>.filled(dets.length, false);
+    final keep = <_Det>[];
+    for (int i = 0; i < dets.length; i++) {
+      if (sup[i]) continue;
+      keep.add(dets[i]);
+      for (int j = i + 1; j < dets.length; j++) {
+        if (sup[j]) continue;
+        if (_iou(dets[i].box, dets[j].box) > _iouThres) sup[j] = true;
+      }
+    }
+    return keep;
+  }
+
+  double _iou(Rect a, Rect b) {
+    final il = math.max(a.left, b.left), it = math.max(a.top, b.top);
+    final ir = math.min(a.right, b.right), ib = math.min(a.bottom, b.bottom);
+    final iW = math.max(0.0, ir - il), iH = math.max(0.0, ib - it);
+    final iA = iW * iH;
+    final u = a.width * a.height + b.width * b.height - iA;
+    return u <= 0 ? 0 : iA / u;
   }
 }
+
+// ============================================================================
+// BOUNDING BOX PAINTER  (now delegates to top-level _varietyAccent)
+// ============================================================================
+
+class _BBPainter extends CustomPainter {
+  final DetectionResult? det;
+  const _BBPainter({this.det});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final d = det;
+    if (d == null) return;
+    final color = _varietyAccent(d.className);
+    final boxP = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    final bgP = Paint()..color = color.withOpacity(0.92);
+    final r = Rect.fromLTWH(
+      d.x * size.width,
+      d.y * size.height,
+      d.width * size.width,
+      d.height * size.height,
+    );
+    canvas.drawRect(r, boxP);
+
+    final lbl =
+        '${d.className.cap}  ${(d.confidence * 100).toStringAsFixed(0)}%';
+    final tp = TextPainter(
+      text: TextSpan(
+        text: lbl,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    const pad = 5.0;
+    final bgR = Rect.fromLTWH(
+      r.left,
+      math.max(0, r.top - tp.height - pad * 2),
+      tp.width + pad * 2,
+      tp.height + pad * 2,
+    );
+    canvas.drawRect(bgR, bgP);
+    tp.paint(canvas, Offset(bgR.left + pad, bgR.top + pad));
+  }
+
+  @override
+  bool shouldRepaint(_BBPainter o) => o.det != det;
+}
+
+// ============================================================================
+// SHARED DESIGN COMPONENTS
+// ============================================================================
+
+class _TappableCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final EdgeInsetsGeometry margin;
+  const _TappableCard({
+    required this.child,
+    required this.onTap,
+    this.margin = const EdgeInsets.only(bottom: 10),
+  });
+  @override
+  State<_TappableCard> createState() => _TappableCardState();
+}
+
+class _TappableCardState extends State<_TappableCard> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTapDown: (_) => setState(() => _pressed = true),
+    onTapUp: (_) {
+      setState(() => _pressed = false);
+      widget.onTap();
+    },
+    onTapCancel: () => setState(() => _pressed = false),
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      margin: widget.margin,
+      decoration: BoxDecoration(
+        color: C.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _pressed ? C.primary : C.border, width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: _pressed
+                ? C.primary.withOpacity(0.12)
+                : const Color(0x0A000000),
+            blurRadius: _pressed ? 10 : 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: widget.child,
+    ),
+  );
+}
+
+class _Card extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final BorderRadius? radius;
+  const _Card({required this.child, this.padding, this.radius});
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: padding ?? const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: C.surface,
+      borderRadius: radius ?? BorderRadius.circular(16),
+      border: Border.all(color: C.border),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x0A000000),
+          blurRadius: 8,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: child,
+  );
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader(this.title);
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Container(
+        width: 3,
+        height: 16,
+        decoration: BoxDecoration(
+          color: C.primary,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Text(
+        title,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: C.textPrimary,
+        ),
+      ),
+    ],
+  );
+}
+
+class _Pill extends StatelessWidget {
+  final String label;
+  final Color bg, fg;
+  const _Pill(this.label, {this.bg = C.primaryLight, this.fg = C.primary});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+    ),
+  );
+}
+
+class _ConfBar extends StatelessWidget {
+  final double value;
+  const _ConfBar(this.value);
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Confidence Level',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: C.textSec,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: C.primaryLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _accLabel(value),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: C.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Text(
+            '${(value * 100).toStringAsFixed(0)}%',
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: C.primary,
+              height: 1.0,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: value),
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeOutCubic,
+          builder: (_, v, __) => LinearProgressIndicator(
+            value: v,
+            minHeight: 8,
+            backgroundColor: C.border,
+            valueColor: const AlwaysStoppedAnimation(C.primary),
+          ),
+        ),
+      ),
+    ],
+  );
+
+  static String _accLabel(double c) => c >= 0.80
+      ? 'High Accuracy'
+      : c >= 0.50
+      ? 'Medium Accuracy'
+      : 'Low Accuracy';
+}
+
+class _CharRow extends StatelessWidget {
+  final IconData icon;
+  final String label, value;
+  const _CharRow(this.icon, this.label, this.value);
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: C.primaryTint,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: C.primary),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 90,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: C.textSec),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: C.textPrimary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ============================================================================
+// IMAGE CAROUSEL
+// ============================================================================
+
+class _ImageCarousel extends StatefulWidget {
+  final List<String> imagePaths;
+  const _ImageCarousel({required this.imagePaths});
+  @override
+  State<_ImageCarousel> createState() => _ImageCarouselState();
+}
+
+class _ImageCarouselState extends State<_ImageCarousel> {
+  final PageController _pc = PageController();
+  int _current = 0;
+
+  @override
+  void dispose() {
+    _pc.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          height: 220,
+          width: double.infinity,
+          child: PageView.builder(
+            controller: _pc,
+            itemCount: widget.imagePaths.length,
+            onPageChanged: (i) => setState(() => _current = i),
+            itemBuilder: (_, i) => Image.asset(
+              widget.imagePaths[i],
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: C.bg,
+                child: const Center(
+                  child: Icon(
+                    Icons.image_not_supported,
+                    size: 48,
+                    color: C.textMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(widget.imagePaths.length, (i) {
+          final sel = _current == i;
+          return GestureDetector(
+            onTap: () => _pc.animateToPage(
+              i,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: sel ? 20 : 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: sel ? C.primary : C.borderMid,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          );
+        }),
+      ),
+    ],
+  );
+}
+
+// ============================================================================
+// APP BAR HELPER
+// ============================================================================
+
+PreferredSizeWidget _appBar(String title, {List<Widget>? actions}) => AppBar(
+  backgroundColor: C.surface,
+  surfaceTintColor: C.surface,
+  scrolledUnderElevation: 0,
+  elevation: 0,
+  title: Row(
+    children: [
+      Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: C.primaryLight,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.eco, color: C.primary, size: 20),
+      ),
+      const SizedBox(width: 10),
+      Text(
+        title,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: C.textPrimary,
+        ),
+      ),
+    ],
+  ),
+  actions: actions,
+);
 
 // ============================================================================
 // MAIN NAVIGATION
@@ -461,142 +1265,128 @@ class CamoteClassifier {
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
-
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 0;
-  final CamoteClassifier _classifier = CamoteClassifier();
-  DetectionLog? _lastResult;
-  final GlobalKey<_ResultsPageState> _resultsPageKey = GlobalKey();
-  final GlobalKey<_HistoryPageState> _historyPageKey = GlobalKey();
+  int _idx = 0;
+  final _cls = CamoteClassifier();
+  DetectionLog? _last;
+  final _rKey = GlobalKey<_ResultsPageState>();
+  final _hKey = GlobalKey<_HistoryPageState>();
 
   @override
   void initState() {
     super.initState();
-    _classifier.loadModel();
+    _cls.loadModel().catchError(
+      (e) => debugPrint('[Doma] model load failed: $e'),
+    );
   }
 
   @override
   void dispose() {
-    _classifier.dispose();
+    _cls.dispose();
     super.dispose();
   }
 
-  void _setResult(DetectionLog result) {
+  void _onResult(DetectionLog log) {
     setState(() {
-      _lastResult = result;
-      _currentIndex = 1;
+      _last = log;
+      _idx = 1;
     });
-    _resultsPageKey.currentState?.updateResult(result);
-    _historyPageKey.currentState?.addNewLog(result);
+    _rKey.currentState?.update(log);
+    _hKey.currentState?.add(log);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          ScanPage(
-            classifier: _classifier,
-            onResult: _setResult,
-            cameras: _cameras,
-          ),
-          ResultsPage(key: _resultsPageKey, result: _lastResult),
-          HistoryPage(key: _historyPageKey),
-          const LibraryPage(),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  0,
-                  Icons.camera_alt_outlined,
-                  Icons.camera_alt,
-                  'Scan',
-                ),
-                _buildNavItem(
-                  1,
-                  Icons.analytics_outlined,
-                  Icons.analytics,
-                  'Results',
-                ),
-                _buildNavItem(
-                  2,
-                  Icons.history_outlined,
-                  Icons.history,
-                  'History',
-                ),
-                _buildNavItem(
-                  3,
-                  Icons.photo_library_outlined,
-                  Icons.photo_library,
-                  'Library',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(
+    body: IndexedStack(
+      index: _idx,
+      children: [
+        ScanPage(classifier: _cls, onResult: _onResult, cameras: _cameras),
+        ResultsPage(key: _rKey, result: _last),
+        HistoryPage(key: _hKey),
+        const LibraryPage(),
+      ],
+    ),
+    bottomNavigationBar: _BottomNav(
+      currentIndex: _idx,
+      onTap: (i) => setState(() => _idx = i),
+    ),
+  );
+}
 
-  Widget _buildNavItem(
-    int index,
-    IconData icon,
-    IconData activeIcon,
-    String label,
-  ) {
-    final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryLight : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+// ============================================================================
+// BOTTOM NAV
+// ============================================================================
+
+class _BottomNav extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+  const _BottomNav({required this.currentIndex, required this.onTap});
+
+  static const _items = [
+    (Icons.camera_alt_outlined, Icons.camera_alt, 'Scan'),
+    (Icons.analytics_outlined, Icons.analytics, 'Results'),
+    (Icons.history_outlined, Icons.history, 'History'),
+    (Icons.photo_library_outlined, Icons.photo_library, 'Library'),
+  ];
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: const BoxDecoration(
+      color: C.surface,
+      border: Border(top: BorderSide(color: C.border, width: 1)),
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: List.generate(_items.length, (i) {
+            final sel = currentIndex == i;
+            final item = _items[i];
+            return GestureDetector(
+              onTap: () => onTap(i),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: sel ? C.primaryLight : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      sel ? item.$2 : item.$1,
+                      color: sel ? C.primary : C.textMuted,
+                      size: 22,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      item.$3,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                        color: sel ? C.primary : C.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            );
+          }),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 // ============================================================================
@@ -607,62 +1397,79 @@ class ScanPage extends StatefulWidget {
   final CamoteClassifier classifier;
   final Function(DetectionLog) onResult;
   final List<CameraDescription> cameras;
-
   const ScanPage({
     super.key,
     required this.classifier,
     required this.onResult,
     required this.cameras,
   });
-
   @override
   State<ScanPage> createState() => _ScanPageState();
 }
 
-class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
-  final ImagePicker _picker = ImagePicker();
-  bool _isProcessing = false;
-
-  // Camera
-  CameraController? _cameraController;
-  bool _cameraReady = false;
-  String? _cameraError;
+class _ScanPageState extends State<ScanPage>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
+  final _picker = ImagePicker();
+  bool _busy = false;
+  File? _previewFile;
+  CameraController? _cam;
+  bool _camReady = false;
+  String? _camErr;
+  late AnimationController _scanCtrl, _cornerCtrl;
+  late Animation<double> _scanAnim, _cornerAnim;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initCamera();
+    _scanCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+    _scanAnim = CurvedAnimation(parent: _scanCtrl, curve: Curves.easeInOut);
+    _cornerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _cornerAnim = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _cornerCtrl, curve: Curves.easeInOut));
+    _initCam();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _cameraController?.dispose();
+    _cam?.dispose();
+    _scanCtrl.dispose();
+    _cornerCtrl.dispose();
     super.dispose();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final ctrl = _cameraController;
-    if (ctrl == null || !ctrl.value.isInitialized) return;
-    if (state == AppLifecycleState.inactive) {
-      ctrl.dispose();
-      if (mounted) setState(() => _cameraReady = false);
-    } else if (state == AppLifecycleState.resumed) {
-      _initCamera();
-    }
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (_cam == null || !_cam!.value.isInitialized) return;
+    if (s == AppLifecycleState.inactive) {
+      _cam!.dispose();
+      if (mounted) setState(() => _camReady = false);
+    } else if (s == AppLifecycleState.resumed)
+      _initCam();
   }
 
-  Future<void> _initCamera() async {
+  Future<void> _initCam() async {
     if (widget.cameras.isEmpty) {
-      if (mounted) {
-        setState(() => _cameraError = 'No camera found on this device.');
-      }
+      if (mounted) setState(() => _camErr = 'No camera found.');
       return;
     }
     try {
-      final controller = CameraController(
+      final old = _cam;
+      _cam = null;
+      if (mounted) setState(() => _camReady = false);
+      try {
+        await old?.dispose();
+      } catch (_) {}
+      final c = CameraController(
         widget.cameras.first,
         ResolutionPreset.high,
         enableAudio: false,
@@ -670,445 +1477,115 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
             ? ImageFormatGroup.bgra8888
             : ImageFormatGroup.yuv420,
       );
-      _cameraController = controller;
-      await controller.initialize();
-      if (mounted) {
+      _cam = c;
+      await c.initialize();
+      if (!mounted) {
+        try {
+          await c.dispose();
+        } catch (_) {}
+        _cam = null;
+        return;
+      }
+      try {
+        await c.setFocusMode(FocusMode.auto);
+        await c.setExposureMode(ExposureMode.auto);
+        await c.setFlashMode(FlashMode.off);
+      } catch (_) {}
+      if (mounted)
         setState(() {
-          _cameraReady = true;
-          _cameraError = null;
+          _camReady = true;
+          _camErr = null;
         });
-      }
     } catch (e) {
-      if (mounted) setState(() => _cameraError = 'Camera error: $e');
+      debugPrint('[Doma] camera error: $e');
+      if (mounted) setState(() => _camErr = 'Camera unavailable.');
     }
   }
 
-  Future<void> _capturePhoto() async {
-    if (_cameraController == null ||
-        !_cameraController!.value.isInitialized ||
-        _isProcessing)
-      return;
+  Future<void> _capture() async {
+    if (_cam == null || !_cam!.value.isInitialized || _busy) return;
     try {
-      final XFile photo = await _cameraController!.takePicture();
-      await _processImage(File(photo.path));
+      final f = await _cam!.takePicture();
+      await _process(File(f.path));
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Capture error: $e')));
-      }
+      debugPrint('[Doma] capture error: $e');
+      if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _pickFromGallery() async {
-    if (_isProcessing) return;
-    final XFile? image = await _picker.pickImage(
+  Future<void> _gallery() async {
+    if (_busy) return;
+    final f = await _picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 1280,
-      maxHeight: 1280,
-      imageQuality: 90,
+      maxWidth: 1920,
+      maxHeight: 1920,
+      imageQuality: 95,
     );
-    if (image != null) {
-      await _processImage(File(image.path));
-    }
+    if (f != null) await _process(File(f.path));
   }
 
-  Future<void> _processImage(File imageFile) async {
+  Future<void> _process(File file) async {
     if (!mounted) return;
-    setState(() => _isProcessing = true);
-
+    setState(() {
+      _busy = true;
+      _previewFile = file;
+    });
     await Future.delayed(const Duration(milliseconds: 80));
-
     try {
-      final results = await widget.classifier.detectFromFile(imageFile);
-
+      final result = await widget.classifier.detect(file);
       if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _previewFile = null;
+      });
 
-      // FIX: results is already filtered by displayThreshold (0.75) inside
-      // the classifier, so an empty list here reliably means no camote found.
-      if (results.isEmpty) {
-        _showNoCamoteDialog();
-        return;
+      switch (result.state) {
+        case _ScanState.notFound:
+          if (mounted) _showDlg(const _NoCamoteDlg());
+          return;
+        case _ScanState.multipleVariants:
+          if (mounted) _showDlg(const _MultipleVariantsDlg());
+          return;
+        case _ScanState.ok:
+          break;
       }
 
-      final uniqueClasses = results.map((r) => r.className).toSet();
-      if (uniqueClasses.length > 1) {
-        _showMultipleCamotesDialog();
+      final dir = await getApplicationDocumentsDirectory();
+      final path =
+          '${dir.path}/camote_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      await file.copy(path);
+      final winner = result.winner;
+      if (winner == null) {
+        if (mounted) _showDlg(const _NoCamoteDlg());
         return;
       }
-
-      final appDir = await getApplicationDocumentsDirectory();
-      final fileName = 'camote_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final savedPath = '${appDir.path}/$fileName';
-      await imageFile.copy(savedPath);
-
       final log = DetectionLog(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        imagePath: savedPath,
-        results: results,
+        imagePath: path,
+        results: [winner],
         timestamp: DateTime.now(),
       );
-
-      await DetectionLogger.saveLog(log);
+      await DetectionLogger.save(log);
       widget.onResult(log);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[Doma] process error: $e\n$st');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error processing image: $e')));
+        setState(() {
+          _busy = false;
+          _previewFile = null;
+        });
+        _showDlg(const _NoCamoteDlg());
       }
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
-  void _showNoCamoteDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Center(
-        child: Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Invalid Image Detected!',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Please scan a valid camote. Make sure it is clearly visible in the frame.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Retake',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  void _showDlg(Widget dlg) =>
+      showDialog(context: context, builder: (_) => dlg);
 
-  void _showMultipleCamotesDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Center(
-        child: Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Multiple Camotes Detected!',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Scan one camote at a time.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Retry',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showHowToUseDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          color: Colors.white,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primaryLight,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.eco,
-                      color: AppColors.primary,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'How to Use',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 24),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildStep(
-                            1,
-                            'Capture or Upload',
-                            'Point the live camera at a camote and tap "Take Photo", or pick one from your gallery.',
-                          ),
-                          _buildStep(
-                            2,
-                            'Analyze Camote',
-                            'Wait a few seconds while the app analyzes the camote.',
-                          ),
-                          _buildStep(
-                            3,
-                            'View Results',
-                            'View details like shape, skin & flesh color, and texture.',
-                          ),
-                          _buildStep(
-                            4,
-                            'Explore Library',
-                            'Explore references about your camote.',
-                          ),
-                          _buildStep(
-                            5,
-                            'Check History',
-                            'Open history to review your previous scans.',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Got It',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStep(int number, String title, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '$number',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          color: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryLight,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.eco,
-                    color: AppColors.primary,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Doma',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Version 1.0',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'A computer-vision based app for identifying and classifying sweet potato (camote) varieties commonly found in Tacloban City, Leyte.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Close',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCameraPreview() {
-    if (_cameraError != null) {
+  Widget _camView() {
+    if (_camErr != null)
       return Container(
-        color: const Color(0xFF1A2332),
+        color: const Color(0xFF0D1F17),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1116,42 +1593,53 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
               const Icon(
                 Icons.no_photography_outlined,
                 color: Colors.white38,
-                size: 52,
+                size: 48,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
-                  _cameraError!,
+                  _camErr!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white60, fontSize: 13),
+                  style: const TextStyle(color: Colors.white54, fontSize: 13),
                 ),
               ),
             ],
           ),
         ),
       );
-    }
-
-    if (!_cameraReady || _cameraController == null) {
+    if (!_camReady || _cam == null)
       return Container(
-        color: const Color(0xFF1A2332),
+        color: const Color(0xFF0D1F17),
         child: const Center(
-          child: CircularProgressIndicator(color: Color(0xFF00D97E)),
+          child: CircularProgressIndicator(
+            color: C.primaryMid,
+            strokeWidth: 2.5,
+          ),
+        ),
+      );
+    final preview = _cam!.value.previewSize;
+    if (preview == null) {
+      return Container(
+        color: const Color(0xFF0D1F17),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: C.primaryMid,
+            strokeWidth: 2.5,
+          ),
         ),
       );
     }
-
     return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(18),
       child: OverflowBox(
         alignment: Alignment.center,
         child: FittedBox(
           fit: BoxFit.cover,
           child: SizedBox(
-            width: _cameraController!.value.previewSize!.height,
-            height: _cameraController!.value.previewSize!.width,
-            child: CameraPreview(_cameraController!),
+            width: preview.height,
+            height: preview.width,
+            child: CameraPreview(_cam!),
           ),
         ),
       ),
@@ -1159,362 +1647,679 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        scrolledUnderElevation: 0,
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.eco, color: AppColors.primary, size: 20),
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: C.bg,
+    appBar: _appBar(
+      'Scan Camote',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.menu_book_outlined),
+          color: C.textSec,
+          tooltip: 'How to Use',
+          onPressed: () => _showDlg(const _HowToDlg()),
+        ),
+        IconButton(
+          icon: const Icon(Icons.help_outline),
+          color: C.textSec,
+          tooltip: 'About',
+          onPressed: () => _showDlg(const _AboutDlg()),
+        ),
+      ],
+    ),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Container(
+            height: 420,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D1F17),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: C.primary, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: C.primary.withOpacity(0.18),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
+            clipBehavior: Clip.hardEdge,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (_busy && _previewFile != null)
+                  Opacity(
+                    opacity: 0.20,
+                    child: Image.file(_previewFile!, fit: BoxFit.cover),
+                  )
+                else
+                  _camView(),
+                if (_camReady && !_busy)
+                  AnimatedBuilder(
+                    animation: _scanAnim,
+                    builder: (_, __) => Positioned(
+                      top: 40 + _scanAnim.value * 310,
+                      left: 20,
+                      right: 20,
+                      child: Container(
+                        height: 1.5,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              C.primaryMid.withOpacity(0.85),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_camReady && !_busy)
+                  AnimatedBuilder(
+                    animation: _cornerAnim,
+                    builder: (_, __) => Positioned.fill(
+                      child: CustomPaint(painter: _FP(_cornerAnim.value)),
+                    ),
+                  ),
+                if (_busy) const _ProcOverlay(),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _busy ? null : _capture,
+                  icon: const Icon(Icons.camera_alt_outlined, size: 19),
+                  label: const Text('Take Photo'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: C.primary,
+                    foregroundColor: C.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 54,
+                height: 54,
+                child: OutlinedButton(
+                  onPressed: _busy ? null : _gallery,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: C.primary,
+                    padding: EdgeInsets.zero,
+                    side: const BorderSide(color: C.primary, width: 0.8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Icon(Icons.photo_outlined, size: 21),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: C.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: C.primary, width: 1.0),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: C.primaryLight,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: const Icon(
+                        Icons.lightbulb_outline,
+                        color: C.primary,
+                        size: 15,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Tips for Best Results',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: C.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _tip('Scan one (1) camote per photo for accurate results.'),
+                _tip('Make sure the camote is well-lit and in focus.'),
+                _tip('Utilize most of the frame with the camote.'),
+                _tip('Avoid blurry images if possible.'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _tip(String t) => Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 5),
+          width: 4,
+          height: 4,
+          decoration: const BoxDecoration(
+            color: C.primary,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            t,
+            style: const TextStyle(
+              fontSize: 12,
+              color: C.textSec,
+              height: 1.45,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ── Scan animation helpers ───────────────────────────────────────────────────
+
+class _FP extends CustomPainter {
+  final double op;
+  const _FP(this.op);
+  @override
+  void paint(Canvas c, Size s) {
+    final p = Paint()
+      ..color = C.primaryMid.withOpacity(op)
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    const l = 28.0, pad = 18.0;
+    for (final pts in [
+      [Offset(pad, pad + l), Offset(pad, pad), Offset(pad + l, pad)],
+      [
+        Offset(s.width - pad - l, pad),
+        Offset(s.width - pad, pad),
+        Offset(s.width - pad, pad + l),
+      ],
+      [
+        Offset(pad, s.height - pad - l),
+        Offset(pad, s.height - pad),
+        Offset(pad + l, s.height - pad),
+      ],
+      [
+        Offset(s.width - pad - l, s.height - pad),
+        Offset(s.width - pad, s.height - pad),
+        Offset(s.width - pad, s.height - pad - l),
+      ],
+    ]) {
+      c.drawPath(
+        Path()
+          ..moveTo(pts[0].dx, pts[0].dy)
+          ..lineTo(pts[1].dx, pts[1].dy)
+          ..lineTo(pts[2].dx, pts[2].dy),
+        p,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FP o) => o.op != op;
+}
+
+class _ProcOverlay extends StatefulWidget {
+  const _ProcOverlay();
+  @override
+  State<_ProcOverlay> createState() => _ProcOverlayState();
+}
+
+class _ProcOverlayState extends State<_ProcOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _fadeCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _fadeAnim,
+    child: Container(
+      color: const Color(0xCC000000),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(
+                color: C.primaryMid,
+                strokeWidth: 2.5,
+                backgroundColor: C.primaryMid.withOpacity(0.12),
+              ),
+            ),
+            const SizedBox(height: 14),
             const Text(
-              'Scan Camote',
+              'Analyzing your image…',
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.4,
               ),
             ),
           ],
         ),
-        actions: [
+      ),
+    ),
+  );
+}
+
+// ============================================================================
+// DIALOG WIDGETS
+// ============================================================================
+
+class _WhiteDlg extends StatelessWidget {
+  final Widget child;
+  const _WhiteDlg({required this.child});
+  @override
+  Widget build(BuildContext context) => Dialog(
+    backgroundColor: C.surface,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+    child: child,
+  );
+}
+
+class _NoCamoteDlg extends StatelessWidget {
+  const _NoCamoteDlg();
+  @override
+  Widget build(BuildContext context) => _WhiteDlg(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Container(
-            margin: const EdgeInsets.only(right: 4),
-            child: const Icon(Icons.circle, color: AppColors.primary, size: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: C.errLight,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.search_off_rounded, color: C.err, size: 28),
           ),
-          IconButton(
-            icon: const Icon(Icons.menu_book_outlined),
-            onPressed: _showHowToUseDialog,
-            color: AppColors.textSecondary,
-            tooltip: 'How to Use',
+          const SizedBox(height: 16),
+          const Text(
+            'No Camote Detected',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: C.textPrimary,
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            color: AppColors.textSecondary,
-            onPressed: _showAboutDialog,
-            tooltip: 'About',
+          const SizedBox(height: 10),
+          const Text(
+            'Make sure the camote is clearly visible, well-lit, and centred in the frame!',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: C.textSec, height: 1.55),
+          ),
+          const SizedBox(height: 24),
+          _dlgBtnIcon(
+            'Try Again',
+            icon: Icons.replay_rounded,
+            onTap: () => Navigator.pop(context),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Container(
-              height: 420,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFF00D97E), width: 2.5),
-              ),
-              clipBehavior: Clip.hardEdge,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _buildCameraPreview(),
+    ),
+  );
+}
 
-                  if (_cameraReady)
-                    Positioned.fill(
-                      child: CustomPaint(painter: _ScanFramePainter()),
-                    ),
-
-                  if (_isProcessing)
-                    Container(
-                      color: const Color.fromARGB(
-                        255,
-                        3,
-                        28,
-                        13,
-                      ).withOpacity(0.75),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(
-                                    0xFF00D97E,
-                                  ).withOpacity(0.3),
-                                  width: 3,
-                                ),
-                              ),
-                              child: const CircularProgressIndicator(
-                                color: Color(0xFF00D97E),
-                                strokeWidth: 5,
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            const Text(
-                              'Analyzing Image...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Please wait while we identify\nthe camote variety',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.75),
-                                fontSize: 14,
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _dot(1.0),
-                                const SizedBox(width: 8),
-                                _dot(0.6),
-                                const SizedBox(width: 8),
-                                _dot(0.3),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+class _MultipleVariantsDlg extends StatelessWidget {
+  const _MultipleVariantsDlg();
+  @override
+  Widget build(BuildContext context) => _WhiteDlg(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: C.warnLight,
+              borderRadius: BorderRadius.circular(14),
             ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: C.warn,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Multiple Varieties Detected',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: C.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'More than one camote variety was detected in this image. The scan has been rejected to ensure accuracy',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: C.textSec, height: 1.55),
+          ),
+          const SizedBox(height: 24),
+          _dlgBtnIcon(
+            'Try Again',
+            icon: Icons.replay_rounded,
+            onTap: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
-            const SizedBox(height: 20),
-
+class _HowToDlg extends StatelessWidget {
+  const _HowToDlg();
+  @override
+  Widget build(BuildContext context) => _WhiteDlg(
+    child: ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.78,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Row(
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _isProcessing ? null : _capturePhoto,
-                    icon: const Icon(Icons.camera_alt_outlined, size: 20),
-                    label: const Text('Take Photo'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      elevation: 0,
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: C.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.menu_book_outlined,
+                    color: C.primary,
+                    size: 20,
                   ),
                 ),
-
                 const SizedBox(width: 12),
-
-                SizedBox(
-                  width: 58,
-                  height: 58,
-                  child: OutlinedButton(
-                    onPressed: _isProcessing ? null : _pickFromGallery,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: BorderSide(color: AppColors.border, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      padding: EdgeInsets.zero,
+                const Text(
+                  'How to Use',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: C.textPrimary,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: C.bg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: C.border),
                     ),
-                    child: const Icon(Icons.photo_outlined, size: 24),
+                    child: const Icon(Icons.close, size: 16, color: C.textSec),
                   ),
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Tips for Best Camote Results',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildTip(
-                    '- Ensure the camote is fully visible and centered in the frame.',
-                  ),
-                  _buildTip('- Ensure good quality lighting.'),
-                  _buildTip('- Recommended to use plain or simple background.'),
-                  _buildTip('- Avoid blurry photos if necessary.'),
-                ],
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _step(
+                      1,
+                      'Place ONE Camote',
+                      'Put a single camote on a plain surface and centre it in the frame.',
+                    ),
+                    _step(
+                      2,
+                      'Capture',
+                      'Tap "Take Photo" or pick an image from your gallery.',
+                    ),
+                    _step(
+                      3,
+                      'Analyze',
+                      'The AI model identifies the variety automatically.',
+                    ),
+                    _step(
+                      4,
+                      'View Results',
+                      'See the variety name, confidence, shape, colours, and texture.',
+                    ),
+                    _step(
+                      5,
+                      'History & Library',
+                      'Review past scans or browse all four varieties.',
+                    ),
+                  ],
+                ),
               ),
             ),
+            const SizedBox(height: 20),
+            _dlgBtn('Got It', onTap: () => Navigator.pop(context)),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _dot(double opacity) => Container(
-    width: 8,
-    height: 8,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: const Color.fromARGB(255, 255, 255, 255).withOpacity(opacity),
     ),
   );
 
-  Widget _buildTip(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: Text(
-      text,
-      style: TextStyle(
-        fontSize: 13,
-        color: AppColors.textSecondary,
-        height: 1.5,
+  Widget _step(int n, String t, String d) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          decoration: const BoxDecoration(
+            color: C.primary,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '$n',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: C.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                d,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: C.textSec,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _AboutDlg extends StatelessWidget {
+  const _AboutDlg();
+  @override
+  Widget build(BuildContext context) => _WhiteDlg(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: C.primaryLight,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.eco, color: C.primary, size: 32),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Doma',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              color: C.textPrimary,
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: C.primaryLight,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Version 1.0',
+              style: TextStyle(
+                fontSize: 12,
+                color: C.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'A computer-vision app for identifying and classifying sweet potato (camote) varieties commonly found in Tacloban City, Leyte.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: C.textSec, height: 1.55),
+          ),
+          const SizedBox(height: 22),
+          _dlgBtn('Close', onTap: () => Navigator.pop(context)),
+        ],
       ),
     ),
   );
 }
 
-// Corner-bracket scan-frame painter
-class _ScanFramePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF00D97E)
-      ..strokeWidth = 3.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+Widget _dlgBtn(String label, {required VoidCallback onTap}) => SizedBox(
+  width: double.infinity,
+  child: ElevatedButton(
+    onPressed: onTap,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: C.primary,
+      foregroundColor: C.white,
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+    ),
+  ),
+);
 
-    const len = 28.0;
-    const pad = 20.0;
-
-    final corners = [
-      [Offset(pad, pad + len), Offset(pad, pad), Offset(pad + len, pad)],
-      [
-        Offset(size.width - pad - len, pad),
-        Offset(size.width - pad, pad),
-        Offset(size.width - pad, pad + len),
-      ],
-      [
-        Offset(pad, size.height - pad - len),
-        Offset(pad, size.height - pad),
-        Offset(pad + len, size.height - pad),
-      ],
-      [
-        Offset(size.width - pad - len, size.height - pad),
-        Offset(size.width - pad, size.height - pad),
-        Offset(size.width - pad, size.height - pad - len),
-      ],
-    ];
-
-    for (final corner in corners) {
-      final path = Path()
-        ..moveTo(corner[0].dx, corner[0].dy)
-        ..lineTo(corner[1].dx, corner[1].dy)
-        ..lineTo(corner[2].dx, corner[2].dy);
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// ============================================================================
-// BOUNDING BOX PAINTER
-// ============================================================================
-
-class _BoundingBoxPainter extends CustomPainter {
-  final List<DetectionResult> detections;
-
-  // FIX: Matched to the classifier's displayThreshold for consistency.
-  static const double confidenceThreshold = 0.75;
-
-  _BoundingBoxPainter({required this.detections});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF00D97E)
-      ..strokeWidth = 3.0
-      ..style = PaintingStyle.stroke;
-
-    final textPaint = TextPainter(textDirection: TextDirection.ltr);
-
-    final validDetections = detections
-        .where((d) => d.confidence >= confidenceThreshold)
-        .toList();
-
-    for (final detection in validDetections) {
-      final rect = Rect.fromLTWH(
-        detection.x * size.width,
-        detection.y * size.height,
-        detection.width * size.width,
-        detection.height * size.height,
-      );
-
-      canvas.drawRect(rect, paint);
-
-      final confidenceText =
-          '${(detection.confidence * 100).toStringAsFixed(1)}%';
-      textPaint.text = TextSpan(
-        text: confidenceText,
-        style: const TextStyle(
-          color: Color(0xFF00D97E),
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          backgroundColor: Color.fromARGB(200, 0, 0, 0),
+Widget _dlgBtnIcon(
+  String label, {
+  required IconData icon,
+  required VoidCallback onTap,
+}) => SizedBox(
+  width: double.infinity,
+  child: ElevatedButton(
+    onPressed: onTap,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: C.primary,
+      foregroundColor: C.white,
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
-      );
-      textPaint.layout();
-      textPaint.paint(
-        canvas,
-        Offset(detection.x * size.width, detection.y * size.height - 24),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_BoundingBoxPainter oldDelegate) => true;
-}
+        const SizedBox(width: 8),
+        Icon(icon, size: 18, color: C.white),
+      ],
+    ),
+  ),
+);
 
 // ============================================================================
 // RESULTS PAGE
@@ -1523,483 +2328,255 @@ class _BoundingBoxPainter extends CustomPainter {
 class ResultsPage extends StatefulWidget {
   final DetectionLog? result;
   const ResultsPage({super.key, this.result});
-
   @override
   State<ResultsPage> createState() => _ResultsPageState();
 }
 
-class _ResultsPageState extends State<ResultsPage> {
-  late DetectionLog? _currentResult;
+class _ResultsPageState extends State<ResultsPage>
+    with SingleTickerProviderStateMixin {
+  DetectionLog? _r;
+  late AnimationController _ctrl;
+  late Animation<double> _fade;
+  late Animation<Offset> _slide;
 
   @override
   void initState() {
     super.initState();
-    _currentResult = widget.result;
+    _r = widget.result;
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    if (_r != null) _ctrl.forward();
   }
 
   @override
-  void didUpdateWidget(ResultsPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.result != oldWidget.result) {
-      setState(() => _currentResult = widget.result);
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(ResultsPage old) {
+    super.didUpdateWidget(old);
+    if (widget.result != old.result) {
+      setState(() => _r = widget.result);
+      _ctrl.forward(from: 0);
     }
   }
 
-  void updateResult(DetectionLog result) {
-    setState(() => _currentResult = result);
+  void update(DetectionLog log) {
+    setState(() => _r = log);
+    _ctrl.forward(from: 0);
   }
 
-  CamoteVariety? _getVarietyInfo(String className) {
+  CamoteVariety? _v(String cls) {
     try {
       return camoteVarieties.firstWhere(
-        (v) => v.name.toLowerCase() == className.toLowerCase(),
+        (v) => v.name.toLowerCase() == cls.toLowerCase(),
       );
     } catch (_) {
       return null;
     }
   }
 
-  String _getAccuracyLabel(double confidence) {
-    if (confidence >= 0.8) return 'High Accuracy';
-    if (confidence >= 0.5) return 'Medium Accuracy';
-    return 'Low Accuracy';
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_currentResult == null || _currentResult!.results.isEmpty) {
+    if (_r == null || _r!.results.isEmpty)
       return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          scrolledUnderElevation: 0,
-          elevation: 0,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.eco,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'Analysis Results',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
+        backgroundColor: C.bg,
+        appBar: _appBar('Analysis Results'),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.search_off,
-                size: 80,
-                color: AppColors.textSecondary.withOpacity(0.5),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: C.bg,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: C.border, width: 2),
+                ),
+                child: const Icon(
+                  Icons.analytics_outlined,
+                  size: 48,
+                  color: C.textMuted,
+                ),
               ),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'No results yet',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: C.textPrimary,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Scan a camote to see results here',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary.withOpacity(0.7),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // FIX: Consistent with the classifier's displayThreshold.
-    const confidenceThreshold = 0.75;
-    final validResults = _currentResult!.results
-        .where((r) => r.confidence >= confidenceThreshold)
-        .toList();
-
-    if (validResults.isEmpty) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          scrolledUnderElevation: 0,
-          elevation: 0,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.eco,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
+              const SizedBox(height: 6),
               const Text(
-                'Analysis Results',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  Icons.warning_rounded,
-                  size: 64,
-                  color: Colors.orange[700],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'No Camote Detected',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'The image does not contain a clear camote.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Try Another Image'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                ),
+                'Scan a camote to see results here',
+                style: TextStyle(fontSize: 13, color: C.textSec),
               ),
             ],
           ),
         ),
       );
-    }
 
-    final topResult = validResults.first;
-    final varietyInfo = _getVarietyInfo(topResult.className);
+    final top = _r!.results.first;
+    final variety = _v(top.className);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        scrolledUnderElevation: 0,
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.eco, color: AppColors.primary, size: 20),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Analysis Results',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Container(
-              height: 300,
-              width: double.infinity,
-              margin: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+      backgroundColor: C.bg,
+      appBar: _appBar('Analysis Results'),
+      body: FadeTransition(
+        opacity: _fade,
+        child: SlideTransition(
+          position: _slide,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Column(
+              children: [
+                // Image card
+                Container(
+                  height: 280,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.10),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: File(_currentResult!.imagePath).existsSync()
-                    ? Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.file(
-                            File(_currentResult!.imagePath),
-                            fit: BoxFit.cover,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: File(_r!.imagePath).existsSync()
+                        ? Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.file(
+                                File(_r!.imagePath),
+                                fit: BoxFit.cover,
+                              ),
+                              CustomPaint(painter: _BBPainter(det: top)),
+                            ],
+                          )
+                        : Container(
+                            color: C.bg,
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              size: 56,
+                              color: C.textMuted,
+                            ),
                           ),
-                          CustomPaint(
-                            painter: _BoundingBoxPainter(
-                              detections: _currentResult!.results,
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // Identity card
+                _Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: _varietyAccent(top.className),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  variety?.name ?? top.className.cap,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: C.textPrimary,
+                                  ),
+                                ),
+                                if (variety != null) ...[
+                                  Text(
+                                    variety.commonName,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: C.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    variety.scientificName,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: C.textSec,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
-                      )
-                    : Container(
-                        color: Colors.grey[200],
-                        child: const Icon(
-                          Icons.image_not_supported,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
                       ),
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border, width: 1.5),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              varietyInfo?.name ??
-                                  topResult.className.capitalize(),
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            if (varietyInfo != null) ...[
-                              Text(
-                                varietyInfo.commonName,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                varietyInfo.scientificName,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                      const SizedBox(height: 18),
+                      const Divider(height: 1, color: C.border),
+                      const SizedBox(height: 16),
+                      _ConfBar(top.confidence),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Confidence Level',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      Text(
-                        '${(topResult.confidence * 100).toStringAsFixed(1)}%',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: topResult.confidence,
-                      backgroundColor: AppColors.border.withOpacity(0.5),
-                      valueColor: const AlwaysStoppedAnimation(
-                        AppColors.primary,
-                      ),
-                      minHeight: 10,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      _getAccuracyLabel(topResult.confidence),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (varietyInfo != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+
+                if (variety != null) ...[
+                  const SizedBox(height: 12),
+                  _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
+                        const _SectionHeader('Characteristics'),
+                        const SizedBox(height: 12),
+                        const Divider(height: 1, color: C.border),
+                        _CharRow(Icons.straighten, 'Shape', variety.shape),
+                        const Divider(height: 1, color: C.border),
+                        _CharRow(
+                          Icons.palette_outlined,
+                          'Skin Color',
+                          variety.skinColor,
                         ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Visual Characteristics',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        const Divider(height: 1, color: C.border),
+                        _CharRow(
+                          Icons.circle_outlined,
+                          'Flesh Color',
+                          variety.fleshColor,
+                        ),
+                        const Divider(height: 1, color: C.border),
+                        _CharRow(
+                          Icons.texture,
+                          'Surface Texture',
+                          variety.texture,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildCharacteristic(
-                      Icons.crop_square_outlined,
-                      'Shape',
-                      varietyInfo.shape,
-                    ),
-                    _buildCharacteristic(
-                      Icons.palette_outlined,
-                      'Skin Color',
-                      varietyInfo.skinColor,
-                    ),
-                    _buildCharacteristic(
-                      Icons.circle_outlined,
-                      'Flesh Color',
-                      varietyInfo.fleshColor,
-                    ),
-                    _buildCharacteristic(
-                      Icons.texture,
-                      'Surface Texture',
-                      varietyInfo.texture,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 32),
-          ],
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCharacteristic(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppColors.textSecondary),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -2011,1077 +2588,870 @@ class _ResultsPageState extends State<ResultsPage> {
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
-
   @override
   State<HistoryPage> createState() => _HistoryPageState();
 }
 
 class _HistoryPageState extends State<HistoryPage> {
   List<DetectionLog> _logs = [];
-  bool _isLoading = true;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadLogs();
+    _load();
   }
 
-  Future<void> _loadLogs() async {
-    setState(() => _isLoading = true);
-    final logs = await DetectionLogger.loadLogs();
-    setState(() {
-      _logs = logs;
-      _isLoading = false;
-    });
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    _logs = await DetectionLogger.load();
+    setState(() => _loading = false);
   }
 
-  void addNewLog(DetectionLog log) {
-    setState(() => _logs.insert(0, log));
-  }
+  void add(DetectionLog log) => setState(() => _logs.insert(0, log));
 
-  Future<void> _deleteLog(DetectionLog log) async {
-    setState(() => _isLoading = true);
-    await DetectionLogger.deleteLog(log.id);
-    await _loadLogs();
+  Future<void> _del(DetectionLog log) async {
+    setState(() => _loading = true);
+    await DetectionLogger.delete(log.id);
+    await _load();
   }
 
   Future<void> _clearAll() async {
-    final confirm = await showDialog<bool>(
+    final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
+      builder: (_) => _WhiteDlg(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Clear All History?',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Are you sure you want to delete all detection history? This action cannot be undone.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: C.errLight,
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.delete_outline, color: C.err, size: 28),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
+              const SizedBox(height: 14),
+              const Text(
+                'Clear All History?',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: C.textPrimary,
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        style: TextButton.styleFrom(
-                          backgroundColor: AppColors.background,
-                          foregroundColor: AppColors.textPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: const BorderSide(color: AppColors.border),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.error,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Clear All',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
+              const Text(
+                'This will permanently delete all detection history.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: C.textSec, height: 1.5),
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: const BorderSide(color: C.borderMid),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: C.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: C.err,
+                        foregroundColor: C.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Clear All',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
     );
-
-    if (confirm == true) {
-      setState(() => _isLoading = true);
-      await DetectionLogger.clearAllLogs();
-      await _loadLogs();
+    if (ok == true) {
+      setState(() => _loading = true);
+      await DetectionLogger.clearAll();
+      await _load();
     }
   }
 
-  CamoteVariety? _getVarietyInfo(String className) {
+  CamoteVariety? _v(String cls) {
     try {
       return camoteVarieties.firstWhere(
-        (v) => v.name.toLowerCase() == className.toLowerCase(),
+        (v) => v.name.toLowerCase() == cls.toLowerCase(),
       );
     } catch (_) {
       return null;
     }
   }
 
-  void _showHistoryDetail(
-    BuildContext context,
-    DetectionLog log,
-    DetectionResult? topResult,
-    CamoteVariety? varietyInfo,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          color: Colors.white,
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(20),
+  void _detail(DetectionLog log, DetectionResult? top, CamoteVariety? v) =>
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _DetailSheet(
+          log: log,
+          top: top,
+          variety: v,
+          onDelete: () async {
+            await _del(log);
+          },
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: C.bg,
+    appBar: _appBar('Detection History'),
+    body: Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: C.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: C.border),
+          ),
+          child: Row(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Detection Details',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          topResult?.className.capitalize() ?? 'No detection',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        size: 20,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              Container(
-                height: 300,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: File(log.imagePath).existsSync()
-                    ? Image.file(File(log.imagePath), fit: BoxFit.cover)
-                    : Container(
-                        color: Colors.grey[100],
-                        child: Icon(
-                          Icons.image_not_supported,
-                          size: 80,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 24),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.check_circle,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Accuracy',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (topResult != null) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Confidence Level',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          Text(
-                            '${(topResult.confidence * 100).toStringAsFixed(1)}%',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      '${_logs.length}',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: C.primary,
                       ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: topResult.confidence,
-                          backgroundColor: AppColors.border.withOpacity(0.5),
-                          valueColor: const AlwaysStoppedAnimation(
-                            AppColors.primary,
-                          ),
-                          minHeight: 12,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.schedule,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Detection Time',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Date',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${log.timestamp.month}/${log.timestamp.day}/${log.timestamp.year}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Time',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Relative',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              TimeFormatter.getRelativeTime(log.timestamp),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    Text(
+                      _logs.length == 1 ? 'detection' : 'detections',
+                      style: const TextStyle(fontSize: 12, color: C.textSec),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-
-              if (varietyInfo != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.info,
-                            color: AppColors.primary,
-                            size: 20,
+              if (_logs.isNotEmpty)
+                GestureDetector(
+                  onTap: _clearAll,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: C.errLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.delete_outline, color: C.err, size: 15),
+                        SizedBox(width: 5),
+                        Text(
+                          'Clear',
+                          style: TextStyle(
+                            color: C.err,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Variety Information',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _buildCharacteristicDetail(
-                        Icons.crop_square_outlined,
-                        'Shape',
-                        varietyInfo.shape,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildCharacteristicDetail(
-                        Icons.palette_outlined,
-                        'Skin Color',
-                        varietyInfo.skinColor,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildCharacteristicDetail(
-                        Icons.circle_outlined,
-                        'Flesh Color',
-                        varietyInfo.fleshColor,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildCharacteristicDetail(
-                        Icons.texture,
-                        'Surface Texture',
-                        varietyInfo.texture,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    _deleteLog(log);
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Delete Detection'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCharacteristicDetail(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.textSecondary),
-        const SizedBox(width: 12),
-        SizedBox(
-          width: 100,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
+        const SizedBox(height: 10),
         Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
+          child: _loading
+              ? const Center(child: CircularProgressIndicator(color: C.primary))
+              : _logs.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: C.bg,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: C.border, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.history,
+                          size: 40,
+                          color: C.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'No detection history',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: C.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Scan a camote to get started',
+                        style: TextStyle(fontSize: 13, color: C.textSec),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  color: C.primary,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    itemCount: _logs.length,
+                    itemBuilder: (_, i) {
+                      final log = _logs[i];
+                      final top = log.results.isEmpty
+                          ? null
+                          : log.results.first;
+                      final v = _v(top?.className ?? '');
+                      return _HistoryCard(
+                        log: log,
+                        top: top,
+                        variety: v,
+                        index: i,
+                        onTap: () => _detail(log, top, v),
+                        onDelete: () => _del(log),
+                      );
+                    },
+                  ),
+                ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
+
+// ── History card — accent strip now uses _varietyAccent ──────────────────────
+
+class _HistoryCard extends StatelessWidget {
+  final DetectionLog log;
+  final DetectionResult? top;
+  final CamoteVariety? variety;
+  final int index;
+  final VoidCallback onTap, onDelete;
+  const _HistoryCard({
+    required this.log,
+    required this.top,
+    required this.variety,
+    required this.index,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        scrolledUnderElevation: 0,
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.eco, color: AppColors.primary, size: 20),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Detection History',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => _TappableCard(
+    onTap: onTap,
+    margin: const EdgeInsets.only(bottom: 10),
+    child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // ── Variety-coloured accent strip ─────────────────────────
+          Container(
+            width: 4,
+            decoration: BoxDecoration(
+              color: _varietyAccent(top?.className ?? ''),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(13),
+                bottomLeft: Radius.circular(13),
+              ),
+            ),
+          ),
+
+          // ── Thumbnail ─────────────────────────────────────────────
+          ClipRRect(
+            borderRadius: BorderRadius.zero,
+            child: SizedBox(
+              width: 80,
+              child: File(log.imagePath).existsSync()
+                  ? Image.file(File(log.imagePath), fit: BoxFit.cover)
+                  : Container(
+                      color: C.bg,
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        size: 24,
+                        color: C.textMuted,
+                      ),
+                    ),
+            ),
+          ),
+
+          // ── Text content ──────────────────────────────────────────
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    top?.className.cap ?? 'Unknown',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: C.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (variety != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      variety!.commonName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: C.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 7),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.access_time_rounded,
+                        size: 11,
+                        color: C.textMuted,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          TimeFormatter.short(log.timestamp),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: C.textMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        TimeFormatter.rel(log.timestamp),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: C.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (top != null) ...[
+                        const SizedBox(width: 7),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: C.primaryLight,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${(top!.confidence * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: C.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Delete button ─────────────────────────────────────────
+          Container(
+            width: 48,
+            padding: const EdgeInsets.only(bottom: 12, right: 4),
+            alignment: Alignment.bottomCenter,
+            child: GestureDetector(
+              onTap: onDelete,
+              child: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: C.errLight,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.delete_outline_rounded,
+                  size: 16,
+                  color: C.err,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// ── Detail bottom sheet ───────────────────────────────────────────────────────
+
+class _DetailSheet extends StatelessWidget {
+  final DetectionLog log;
+  final DetectionResult? top;
+  final CamoteVariety? variety;
+  final Future<void> Function() onDelete;
+  const _DetailSheet({
+    required this.log,
+    this.top,
+    this.variety,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) => DraggableScrollableSheet(
+    expand: false,
+    initialChildSize: 0.87,
+    minChildSize: 0.5,
+    maxChildSize: 0.95,
+    builder: (_, sc) => Container(
+      decoration: const BoxDecoration(
+        color: C.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 36,
+            height: 4,
+            margin: const EdgeInsets.only(top: 12, bottom: 4),
+            decoration: BoxDecoration(
+              color: C.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Detection History',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        '${_logs.length} detection${_logs.length != 1 ? 's' : ''}',
+                        'Detection Details',
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecondary,
                           fontWeight: FontWeight.w500,
+                          color: C.textSec,
                         ),
+                      ),
+                      if (top != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          top!.className.cap,
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: C.textPrimary,
+                            height: 1.1,
+                          ),
+                        ),
+                        if (variety != null)
+                          Text(
+                            variety!.commonName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: C.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: C.bg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: C.border),
+                    ),
+                    child: const Icon(Icons.close, size: 16, color: C.textSec),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: C.border),
+          Expanded(
+            child: ListView(
+              controller: sc,
+              padding: const EdgeInsets.all(20),
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: SizedBox(
+                    height: 240,
+                    child: File(log.imagePath).existsSync()
+                        ? Image.file(File(log.imagePath), fit: BoxFit.cover)
+                        : Container(
+                            color: C.bg,
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              size: 56,
+                              color: C.textMuted,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                if (top != null) ...[
+                  _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionHeader('Confidence'),
+                        const SizedBox(height: 14),
+                        _ConfBar(top!.confidence),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                _Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionHeader('Timestamp'),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 16,
+                            color: C.textSec,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              TimeFormatter.full(log.timestamp),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: C.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: C.textSec,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            TimeFormatter.rel(log.timestamp),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: C.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                if (_logs.isNotEmpty)
-                  TextButton.icon(
-                    onPressed: _clearAll,
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: AppColors.error,
-                      size: 18,
-                    ),
-                    label: const Text(
-                      'Clear',
-                      style: TextStyle(color: AppColors.error, fontSize: 13),
-                    ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      side: const BorderSide(color: AppColors.error),
+
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await onDelete();
+                    },
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    label: const Text('Delete this Detection'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: C.err,
+                      foregroundColor: C.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _logs.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.history,
-                          size: 80,
-                          color: AppColors.textSecondary.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No detection history',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _loadLogs,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      itemCount: _logs.length,
-                      itemBuilder: (context, index) {
-                        final log = _logs[index];
-                        final topResult = log.results.isNotEmpty
-                            ? log.results.reduce(
-                                (a, b) => a.confidence > b.confidence ? a : b,
-                              )
-                            : null;
-                        final varietyInfo = _getVarietyInfo(
-                          topResult?.className ?? '',
-                        );
-
-                        return GestureDetector(
-                          onTap: () => _showHistoryDetail(
-                            context,
-                            log,
-                            topResult,
-                            varietyInfo,
-                          ),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: AppColors.border,
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
-                              leading: Container(
-                                width: 64,
-                                height: 64,
-                                decoration: const BoxDecoration(
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(11),
-                                    bottomLeft: Radius.circular(11),
-                                  ),
-                                  border: Border(
-                                    left: BorderSide(color: AppColors.border),
-                                    top: BorderSide(color: AppColors.border),
-                                    bottom: BorderSide(color: AppColors.border),
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(10),
-                                    bottomLeft: Radius.circular(10),
-                                  ),
-                                  child: File(log.imagePath).existsSync()
-                                      ? Image.file(
-                                          File(log.imagePath),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : Container(
-                                          color: Colors.grey[100],
-                                          child: Icon(
-                                            Icons.image_not_supported,
-                                            size: 28,
-                                            color: Colors.grey[400],
-                                          ),
-                                        ),
-                                ),
-                              ),
-                              title: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    topResult?.className.capitalize() ??
-                                        'No detection',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  if (varietyInfo != null)
-                                    Text(
-                                      varietyInfo.commonName,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      if (topResult != null)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primaryLight,
-                                            borderRadius: BorderRadius.circular(
-                                              5,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '${(topResult.confidence * 100).toStringAsFixed(0)}% match',
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                              color: AppColors.primary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      const SizedBox(width: 8),
-                                      Icon(
-                                        Icons.schedule,
-                                        size: 12,
-                                        color: AppColors.textSecondary
-                                            .withOpacity(0.6),
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        TimeFormatter.getRelativeTime(
-                                          log.timestamp,
-                                        ),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: AppColors.textSecondary
-                                              .withOpacity(0.7),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              trailing: SizedBox(
-                                width: 32,
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    size: 18,
-                                    color: AppColors.error,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  onPressed: () {
-                                    _deleteLog(log);
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-          ),
         ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 // ============================================================================
-// LIBRARY PAGE (CROP LIBRARY)
+// LIBRARY PAGE
 // ============================================================================
 
 class LibraryPage extends StatelessWidget {
   const LibraryPage({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        scrolledUnderElevation: 0,
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.eco, color: AppColors.primary, size: 20),
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: C.bg,
+    appBar: _appBar('Crop Library'),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: C.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: C.primary, width: 1.0),
             ),
-            const SizedBox(width: 10),
-            const Text(
-              'Crop Library',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Camote Varieties',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Doma can classify 4 varieties commonly found in Tacloban City.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ...camoteVarieties.map(
-              (variety) => _buildVarietyCard(context, variety),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVarietyCard(BuildContext context, CamoteVariety variety) {
-    return GestureDetector(
-      onTap: () => _showVarietyDetail(context, variety),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(11),
-                  bottomLeft: Radius.circular(11),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: C.primaryLight,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: C.primary,
+                    size: 15,
+                  ),
                 ),
-                child: SizedBox(
-                  width: 120,
-                  child: Image.asset(
-                    variety.imagePath,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(
-                        Icons.image,
-                        size: 40,
-                        color: Colors.grey,
-                      ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Doma can classify 4 varieties commonly found in Tacloban City.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: C.primary,
+                      height: 1.45,
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...camoteVarieties.map((v) => _VarietyCard(v)),
+        ],
+      ),
+    ),
+  );
+}
+
+class _VarietyCard extends StatelessWidget {
+  final CamoteVariety v;
+  const _VarietyCard(this.v);
+
+  @override
+  Widget build(BuildContext context) => _TappableCard(
+    onTap: () => _show(context),
+    margin: const EdgeInsets.only(bottom: 14),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Full-width image top
+        ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(13),
+            topRight: Radius.circular(13),
+          ),
+          child: SizedBox(
+            height: 160,
+            width: double.infinity,
+            child: Image.asset(
+              v.imagePath,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: C.bg,
+                child: const Center(
+                  child: Icon(Icons.image, color: C.textMuted, size: 40),
+                ),
               ),
+            ),
+          ),
+        ),
+        // Text content below
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            variety.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                            color: AppColors.primary,
-                          ),
-                        ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      v.name,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: C.textPrimary,
                       ),
-                      Text(
-                        variety.commonName,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      v.commonName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: C.primary,
+                        fontWeight: FontWeight.w600,
                       ),
-                      Text(
-                        variety.scientificName,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                          fontStyle: FontStyle.italic,
-                        ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      v.scientificName,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: C.textSec,
+                        fontStyle: FontStyle.italic,
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Text(
-                            'Skin: ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              variety.skinColor,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            'Flesh: ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              variety.fleshColor,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: C.primaryLight,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: C.primary,
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 
-  void _showVarietyDetail(BuildContext context, CamoteVariety variety) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          color: Colors.white,
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(20),
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  void _show(BuildContext context) => showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.90,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (_, sc) => Container(
+        decoration: const BoxDecoration(
+          color: C.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              decoration: BoxDecoration(
+                color: C.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          variety.name,
+                          v.name,
                           style: const TextStyle(
-                            fontSize: 24,
+                            fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                            color: C.textPrimary,
                           ),
                         ),
                         Text(
-                          variety.commonName,
+                          v.commonName,
                           style: const TextStyle(
-                            fontSize: 16,
-                            color: AppColors.primary,
+                            fontSize: 13,
+                            color: C.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -3091,252 +3461,135 @@ class LibraryPage extends StatelessWidget {
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(7),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.border),
+                        color: C.bg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: C.border),
                       ),
                       child: const Icon(
                         Icons.close,
-                        size: 20,
-                        color: AppColors.textPrimary,
+                        size: 16,
+                        color: C.textSec,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-
-              Container(
-                height: 280,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.asset(
-                    variety.imagePath,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(
-                        Icons.image,
-                        size: 80,
-                        color: Colors.grey,
-                      ),
+            ),
+            const Divider(height: 1, color: C.border),
+            Expanded(
+              child: ListView(
+                controller: sc,
+                padding: const EdgeInsets.all(20),
+                children: [
+                  // ── Image carousel ────────────────────────────────
+                  _ImageCarousel(imagePaths: v.imagePaths),
+                  const SizedBox(height: 16),
+                  _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionHeader('Characteristics'),
+                        const SizedBox(height: 6),
+                        _CharRow(Icons.straighten, 'Shape', v.shape),
+                        const Divider(height: 1, color: C.border),
+                        _CharRow(
+                          Icons.palette_outlined,
+                          'Skin Color',
+                          v.skinColor,
+                        ),
+                        const Divider(height: 1, color: C.border),
+                        _CharRow(
+                          Icons.circle_outlined,
+                          'Flesh Color',
+                          v.fleshColor,
+                        ),
+                        const Divider(height: 1, color: C.border),
+                        _CharRow(Icons.texture, 'Texture', v.texture),
+                      ],
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                  const SizedBox(height: 12),
+                  _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.description,
-                            size: 20,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Description',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                        const _SectionHeader('Description'),
+                        const SizedBox(height: 10),
+                        Text(
+                          v.description,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: C.textSec,
+                            height: 1.6,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      variety.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                        height: 1.6,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                  ),
+                  const SizedBox(height: 12),
+                  _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.favorite,
-                            size: 20,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Health Benefits',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
+                        const _SectionHeader('Health Benefits'),
+                        const SizedBox(height: 10),
+                        ...v.benefits.map(_bullet),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    ...variety.benefits.map(
-                      (benefit) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              margin: const EdgeInsets.only(top: 6),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                benefit,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.textSecondary,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                  ),
+                  const SizedBox(height: 12),
+                  _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.restaurant,
-                            size: 20,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Popular Dishes',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
+                        const _SectionHeader('Popular Dishes'),
+                        const SizedBox(height: 10),
+                        ...v.dishes.map(_bullet),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    ...variety.dishes.map(
-                      (dish) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              margin: const EdgeInsets.only(top: 6),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                dish,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.textSecondary,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+
+  Widget _bullet(String t) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 5),
+          width: 5,
+          height: 5,
+          decoration: const BoxDecoration(
+            color: C.primary,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            t,
+            style: const TextStyle(fontSize: 13, color: C.textSec, height: 1.5),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 // ============================================================================
-// EXTENSION FOR STRING CAPITALIZATION
+// EXTENSIONS
 // ============================================================================
 
-extension StringExtension on String {
-  String capitalize() {
-    return "${this[0].toUpperCase()}${substring(1)}";
-  }
+extension StringX on String {
+  String get cap => isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
 }

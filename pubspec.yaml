@@ -40,7 +40,7 @@ flutter:
     - assets/images/purple_camote.jpg
     - assets/images/white_camote.jpg
     - assets/images/yellow_camote.jpg
-    - assets/model.tflite
+    - assets/best_int8.tflite
     - assets/icon/app_icon.png
 
 flutter_launcher_icons:
