@@ -40,6 +40,22 @@ flutter:
     - assets/images/purple_camote.jpg
     - assets/images/white_camote.jpg
     - assets/images/yellow_camote.jpg
+    - assets/images/kadabaw2.png
+    - assets/images/kadabaw3.png
+    - assets/images/kadabaw4.png
+    - assets/images/kadabaw5.png
+    - assets/images/kadulaw2.png
+    - assets/images/kadulaw3.png
+    - assets/images/kadulaw4.png
+    - assets/images/kadulaw5.png
+    - assets/images/minamon2.png
+    - assets/images/minamon3.png
+    - assets/images/minamon4.png
+    - assets/images/minamon5.png
+    - assets/images/tapol2.png
+    - assets/images/tapol3.png
+    - assets/images/tapol4.png
+    - assets/images/tapol5.png
     - assets/best_int8.tflite
     - assets/icon/app_icon.png
 
