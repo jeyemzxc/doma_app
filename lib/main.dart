@@ -1,15 +1,10 @@
-// lib/main.dart  –  Doma Camote Classifier  (UI v2)
-// Changes from v1:
-//   • Consistent card/chip design system throughout
-//   • History page: professional timeline-style cards with accent strip
-//   • All info dialogs (no camote, multiple variants, about, how-to) → plain white
-//   • Multiple same-class detections → show result; multiple different classes → reject
-//   • Refined typography: DM Sans feel via fontFamily fallback + weight discipline
-//   • Subtle micro-animations on result cards
-//   • Bottom nav: pill indicator, smooth transitions
-// Changes in this revision:
-//   • History card accent strip colour now matches the detected variety
-//     (Kadulaw = burnt orange, Minamon = amber, Kadabaw = violet, Tapol = dark gold)
+// lib/main.dart  –  Doma Camote Classifier  (UI v5)
+// Changes from v4:
+//   • Removed "Position camote in frame" badge
+//   • Removed old "Scanning…" badge
+//   • Added dark green overlay (30% opacity) using the provided bg image when processing
+//   • Added "Analyzing Image…" centered overlay with animated pulsing dots + spinner
+//   • Polished AppBar, bottom action bar, and overall UI refinements
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -50,49 +45,46 @@ void main() async {
 // ============================================================================
 
 class C {
-  // Primary green palette
   static const primary = Color(0xFF00875A);
   static const primaryDark = Color(0xFF005C3D);
   static const primaryMid = Color(0xFF00C27A);
   static const primaryLight = Color(0xFFE8F5EF);
   static const primaryTint = Color(0xFFF0FBF6);
 
-  // Neutral
   static const bg = Color(0xFFF5F6F8);
   static const surface = Color(0xFFFFFFFF);
   static const border = Color(0xFFEAECF0);
   static const borderMid = Color(0xFFD1D5DB);
 
-  // Text
   static const textPrimary = Color(0xFF111827);
   static const textSec = Color(0xFF6B7280);
   static const textMuted = Color(0xFF9CA3AF);
 
-  // Status
   static const err = Color(0xFFDC2626);
   static const errLight = Color(0xFFFEF2F2);
   static const warn = Color(0xFFD97706);
   static const warnLight = Color(0xFFFFFBEB);
 
   static const white = Colors.white;
+
+  // Camera overlay dark bg color (matches the provided image)
+  static const camOverlayDark = Color(0xFF071A10);
 }
 
 // ============================================================================
-// TOP-LEVEL VARIETY ACCENT COLOUR
-// Used by _BBPainter, _ResultsPage identity card, and _HistoryCard accent strip.
+// VARIETY ACCENT COLOUR
 // ============================================================================
 
-/// Returns the characteristic accent colour for each camote variety.
 Color _varietyAccent(String cls) {
   switch (cls.toLowerCase()) {
     case 'kadulaw':
-      return const Color(0xFFD3510B); // burnt orange
+      return const Color(0xFFD3510B);
     case 'minamon':
-      return const Color(0xFFBA8E23); // amber / gold
+      return const Color(0xFFBA8E23);
     case 'kadabaw':
-      return const Color(0xFFFF3D9A); // hot pink
+      return const Color(0xFF9B3B69);
     case 'tapol':
-      return const Color(0xFFADCEEF); // powder blue
+      return const Color(0xFFB1ACA8);
     default:
       return C.primary;
   }
@@ -134,7 +126,6 @@ class TimeFormatter {
     return '${dt.month}/${dt.day}/${dt.year}';
   }
 
-  // Short: "Mar 22, 2:30 PM"
   static String short(DateTime dt) {
     const months = [
       'Jan',
@@ -156,7 +147,6 @@ class TimeFormatter {
     return '${months[dt.month - 1]} ${dt.day}  $h:$m $ap';
   }
 
-  // Full: "Mar 22, 2026 • 2:30 PM"
   static String full(DateTime dt) {
     const months = [
       'Jan',
@@ -640,17 +630,13 @@ class CamoteClassifier {
     final raw = isSimple
         ? _decodeSimple(oShape, input)
         : _decodeYolo(oShape, nCls, input);
-
     final mapped = _unmap(raw, image.width.toDouble(), image.height.toDouble());
     final nmsed = _nms(mapped);
-
     if (nmsed.isEmpty) return const _ScanResult(state: _ScanState.notFound);
-
     final classes = nmsed.map((d) => d.cls).toSet();
     if (classes.length > 1) {
       return const _ScanResult(state: _ScanState.multipleVariants);
     }
-
     final w = nmsed.first;
     if (w.score < _displayGate) {
       return const _ScanResult(state: _ScanState.notFound);
@@ -683,7 +669,6 @@ class CamoteClassifier {
       tr = true;
       N = shape.length == 3 ? shape[2] : shape[0];
     }
-
     final buf = tr
         ? List.generate(
             1,
@@ -694,7 +679,6 @@ class CamoteClassifier {
             (_) => List.generate(N, (_) => List<double>.filled(CC, 0.0)),
           );
     _interp!.run(input.r4([1, sz, sz, 3]), buf);
-
     List<List<double>> preds;
     if (tr) {
       preds = List.generate(N, (i) => List<double>.filled(CC, 0.0));
@@ -850,7 +834,7 @@ class CamoteClassifier {
 }
 
 // ============================================================================
-// BOUNDING BOX PAINTER  (now delegates to top-level _varietyAccent)
+// BOUNDING BOX PAINTER
 // ============================================================================
 
 class _BBPainter extends CustomPainter {
@@ -874,7 +858,6 @@ class _BBPainter extends CustomPainter {
       d.height * size.height,
     );
     canvas.drawRect(r, boxP);
-
     final lbl =
         '${d.className.cap}  ${(d.confidence * 100).toStringAsFixed(0)}%';
     final tp = TextPainter(
@@ -901,6 +884,192 @@ class _BBPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BBPainter o) => o.det != det;
+}
+
+// ============================================================================
+// ANALYZING IMAGE OVERLAY  (replaces old scanning badge)
+// ============================================================================
+
+class _AnalyzingOverlay extends StatefulWidget {
+  const _AnalyzingOverlay();
+  @override
+  State<_AnalyzingOverlay> createState() => _AnalyzingOverlayState();
+}
+
+class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
+    with TickerProviderStateMixin {
+  late AnimationController _spinCtrl;
+  late AnimationController _pulseCtrl;
+  late AnimationController _dotCtrl;
+  late Animation<double> _pulseAnim;
+  int _dotCount = 0;
+  Timer? _dotTimer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _spinCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(
+      begin: 0.7,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+
+    _dotCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _dotTimer = Timer.periodic(const Duration(milliseconds: 480), (_) {
+      if (mounted) setState(() => _dotCount = (_dotCount + 1) % 4);
+    });
+  }
+
+  @override
+  void dispose() {
+    _spinCtrl.dispose();
+    _pulseCtrl.dispose();
+    _dotCtrl.dispose();
+    _dotTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dots = '.' * _dotCount;
+    return Positioned.fill(
+      child: Container(
+        // Dark overlay matching the provided camera background image tone
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            // Use the scan background asset – falls back to solid color gracefully
+            image: AssetImage('assets/images/scan_bg.png'),
+            fit: BoxFit.cover,
+            opacity: 0.30,
+          ),
+          color: Color(0xCC071A10), // ~80% dark green backdrop
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Pulsing ring + spinner composite
+            AnimatedBuilder(
+              animation: _pulseAnim,
+              builder: (_, child) =>
+                  Transform.scale(scale: _pulseAnim.value, child: child),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outer glow ring
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: C.primaryMid.withOpacity(0.35),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  // Spinner
+                  SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: AnimatedBuilder(
+                      animation: _spinCtrl,
+                      builder: (_, __) => Transform.rotate(
+                        angle: _spinCtrl.value * 2 * math.pi,
+                        child: CustomPaint(painter: _ArcPainter()),
+                      ),
+                    ),
+                  ),
+                  // Inner eco icon
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: C.primaryDark.withOpacity(0.85),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.eco, color: C.primaryMid, size: 20),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            // "Analyzing Image" text with animated dots
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '   Analyzing Image...',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.92),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                SizedBox(
+                  width: 28,
+                  child: Text(
+                    dots,
+                    style: TextStyle(
+                      color: C.primaryMid,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              'The image is being processed.',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.50),
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Draws a sweeping arc for the spinner
+class _ArcPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = C.primaryMid
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    canvas.drawArc(rect, -math.pi / 2, math.pi * 1.5, false, paint);
+  }
+
+  @override
+  bool shouldRepaint(_ArcPainter o) => false;
 }
 
 // ============================================================================
@@ -1415,6 +1584,7 @@ class _ScanPageState extends State<ScanPage>
   CameraController? _cam;
   bool _camReady = false;
   String? _camErr;
+  bool _usingFront = false;
   late AnimationController _scanCtrl, _cornerCtrl;
   late Animation<double> _scanAnim, _cornerAnim;
 
@@ -1453,8 +1623,9 @@ class _ScanPageState extends State<ScanPage>
     if (s == AppLifecycleState.inactive) {
       _cam!.dispose();
       if (mounted) setState(() => _camReady = false);
-    } else if (s == AppLifecycleState.resumed)
+    } else if (s == AppLifecycleState.resumed) {
       _initCam();
+    }
   }
 
   Future<void> _initCam() async {
@@ -1469,8 +1640,14 @@ class _ScanPageState extends State<ScanPage>
       try {
         await old?.dispose();
       } catch (_) {}
+      final camDesc = (_usingFront && widget.cameras.length > 1)
+          ? widget.cameras.firstWhere(
+              (c) => c.lensDirection == CameraLensDirection.front,
+              orElse: () => widget.cameras.first,
+            )
+          : widget.cameras.first;
       final c = CameraController(
-        widget.cameras.first,
+        camDesc,
         ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: Platform.isIOS
@@ -1500,6 +1677,12 @@ class _ScanPageState extends State<ScanPage>
       debugPrint('[Doma] camera error: $e');
       if (mounted) setState(() => _camErr = 'Camera unavailable.');
     }
+  }
+
+  Future<void> _switchCam() async {
+    if (widget.cameras.length < 2 || _busy) return;
+    setState(() => _usingFront = !_usingFront);
+    await _initCam();
   }
 
   Future<void> _capture() async {
@@ -1538,7 +1721,6 @@ class _ScanPageState extends State<ScanPage>
         _busy = false;
         _previewFile = null;
       });
-
       switch (result.state) {
         case _ScanState.notFound:
           if (mounted) _showDlg(const _NoCamoteDlg());
@@ -1549,7 +1731,6 @@ class _ScanPageState extends State<ScanPage>
         case _ScanState.ok:
           break;
       }
-
       final dir = await getApplicationDocumentsDirectory();
       final path =
           '${dir.path}/camote_${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -1630,223 +1811,232 @@ class _ScanPageState extends State<ScanPage>
         ),
       );
     }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: OverflowBox(
-        alignment: Alignment.center,
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: preview.height,
-            height: preview.width,
-            child: CameraPreview(_cam!),
-          ),
+    return OverflowBox(
+      alignment: Alignment.center,
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: preview.height,
+          height: preview.width,
+          child: CameraPreview(_cam!),
         ),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: C.bg,
-    appBar: _appBar(
-      'Scan Camote',
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.menu_book_outlined),
-          color: C.textSec,
-          tooltip: 'How to Use',
-          onPressed: () => _showDlg(const _HowToDlg()),
-        ),
-        IconButton(
-          icon: const Icon(Icons.help_outline),
-          color: C.textSec,
-          tooltip: 'About',
-          onPressed: () => _showDlg(const _AboutDlg()),
-        ),
-      ],
-    ),
-    body: SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+  Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: _appBar(
+        'Scan Camote',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu_book_outlined),
+            color: C.textSec,
+            tooltip: 'How to Use',
+            onPressed: () => _showDlg(const _HowToDlg()),
+          ),
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            color: C.textSec,
+            tooltip: 'About',
+            onPressed: () => _showDlg(const _AboutDlg()),
+          ),
+        ],
+      ),
+      body: Column(
         children: [
-          Container(
-            height: 420,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0D1F17),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: C.primary, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: C.primary.withOpacity(0.18),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            clipBehavior: Clip.hardEdge,
+          // ── Camera viewport ────────────────────────────────────────────
+          Expanded(
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (_busy && _previewFile != null)
-                  Opacity(
-                    opacity: 0.20,
-                    child: Image.file(_previewFile!, fit: BoxFit.cover),
-                  )
+                // ── Camera feed ─────────────────────────────────────────
+                if (_previewFile != null && !_busy)
+                  Image.file(_previewFile!, fit: BoxFit.cover)
+                else if (!_busy)
+                  _camView()
                 else
-                  _camView(),
-                if (_camReady && !_busy)
+                  // When busy: show the captured image dimly underneath
+                  Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (_previewFile != null)
+                        Image.file(_previewFile!, fit: BoxFit.cover)
+                      else
+                        _camView(),
+                    ],
+                  ),
+
+                // ── Scan line (only when camera is live, not busy) ──────
+                if (!_busy)
                   AnimatedBuilder(
                     animation: _scanAnim,
                     builder: (_, __) => Positioned(
-                      top: 40 + _scanAnim.value * 310,
-                      left: 20,
-                      right: 20,
+                      top: 24 + (_scanAnim.value * (screenH * 0.6)),
+                      left: 0,
+                      right: 0,
                       child: Container(
-                        height: 1.5,
+                        height: 2,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
                               Colors.transparent,
-                              C.primaryMid.withOpacity(0.85),
+                              C.primaryMid.withOpacity(0.7),
+                              C.primaryMid.withOpacity(0.7),
                               Colors.transparent,
                             ],
+                            stops: const [0.0, 0.2, 0.8, 1.0],
                           ),
                         ),
                       ),
                     ),
                   ),
-                if (_camReady && !_busy)
+
+                // ── Corner brackets (only when not busy) ────────────────
+                if (!_busy)
                   AnimatedBuilder(
                     animation: _cornerAnim,
                     builder: (_, __) => Positioned.fill(
-                      child: CustomPaint(painter: _FP(_cornerAnim.value)),
+                      child: CustomPaint(
+                        painter: _FP(_cornerAnim.value, busy: false),
+                      ),
                     ),
                   ),
-                if (_busy) const _ProcOverlay(),
+
+                // ── Analyzing overlay (replaces old scanning badge) ─────
+                if (_busy) const _AnalyzingOverlay(),
               ],
             ),
           ),
 
-          const SizedBox(height: 14),
-
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _busy ? null : _capture,
-                  icon: const Icon(Icons.camera_alt_outlined, size: 19),
-                  label: const Text('Take Photo'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: C.primary,
-                    foregroundColor: C.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 54,
-                height: 54,
-                child: OutlinedButton(
-                  onPressed: _busy ? null : _gallery,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: C.primary,
-                    padding: EdgeInsets.zero,
-                    side: const BorderSide(color: C.primary, width: 0.8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Icon(Icons.photo_outlined, size: 21),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
+          // ── Bottom action bar ──────────────────────────────────────────
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: C.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: C.primary, width: 1.0),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            color: C.bg,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: C.primaryLight,
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Icon(
-                        Icons.lightbulb_outline,
-                        color: C.primary,
-                        size: 15,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Tips for Best Results',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: C.primary,
-                      ),
-                    ),
-                  ],
+                // Gallery — left
+                _ActionBtn(
+                  icon: Icons.photo_library_outlined,
+                  label: 'Gallery',
+                  onTap: _busy ? null : _gallery,
+                  busy: _busy,
                 ),
-                const SizedBox(height: 10),
-                _tip('Scan one (1) camote per photo for accurate results.'),
-                _tip('Make sure the camote is well-lit and in focus.'),
-                _tip('Utilize most of the frame with the camote.'),
-                _tip('Avoid blurry images if possible.'),
+
+                // Shutter — circle-in-circle style in primary green
+                GestureDetector(
+                  onTap: _busy ? null : _capture,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 78,
+                    height: 78,
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _busy ? C.primaryDark : C.primary,
+                        width: 3.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: C.primary.withOpacity(_busy ? 0.08 : 0.25),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: _busy
+                          ? SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(
+                                color: C.primary,
+                                strokeWidth: 2.5,
+                                backgroundColor: C.primary.withOpacity(0.2),
+                              ),
+                            )
+                          : Container(
+                              width: 58,
+                              height: 58,
+                              decoration: const BoxDecoration(
+                                color: C.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+
+                // Camera switch — right
+                _ActionBtn(
+                  icon: Icons.flip_camera_ios_outlined,
+                  label: 'Flip',
+                  onTap: _busy ? null : _switchCam,
+                  busy: _busy,
+                ),
               ],
             ),
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
+}
 
-  Widget _tip(String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+// ── Small action button used in the bottom bar ───────────────────────────────
+class _ActionBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool busy;
+  const _ActionBtn({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.busy,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          margin: const EdgeInsets.only(top: 5),
-          width: 4,
-          height: 4,
-          decoration: const BoxDecoration(
-            color: C.primary,
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: busy ? C.border : C.surface,
             shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            t,
-            style: const TextStyle(
-              fontSize: 12,
-              color: C.textSec,
-              height: 1.45,
+            border: Border.all(
+              color: busy ? C.border : C.borderMid,
+              width: 1.5,
             ),
+            boxShadow: busy
+                ? []
+                : [
+                    BoxShadow(
+                      color: const Color(0x0F000000),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          child: Icon(icon, size: 22, color: busy ? C.textMuted : C.textSec),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: busy ? C.textMuted : C.textSec,
           ),
         ),
       ],
@@ -1854,26 +2044,48 @@ class _ScanPageState extends State<ScanPage>
   );
 }
 
-// ── Scan animation helpers ───────────────────────────────────────────────────
+// ── Scan frame painter ────────────────────────────────────────────────────────
 
 class _FP extends CustomPainter {
   final double op;
-  const _FP(this.op);
+  final bool busy;
+  const _FP(this.op, {this.busy = false});
+
   @override
   void paint(Canvas c, Size s) {
+    final color = busy
+        ? C.primaryMid.withOpacity(math.max(op, 0.85))
+        : C.primaryMid.withOpacity(op * 0.9 + 0.1);
+
     final p = Paint()
-      ..color = C.primaryMid.withOpacity(op)
-      ..strokeWidth = 3.0
+      ..color = color
+      ..strokeWidth = busy ? 3.0 : 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    const l = 28.0, pad = 18.0;
-    for (final pts in [
+
+    const pad = 24.0;
+    const l = 28.0;
+
+    final topCorners = [
       [Offset(pad, pad + l), Offset(pad, pad), Offset(pad + l, pad)],
       [
         Offset(s.width - pad - l, pad),
         Offset(s.width - pad, pad),
         Offset(s.width - pad, pad + l),
       ],
+    ];
+
+    for (final pts in topCorners) {
+      c.drawPath(
+        Path()
+          ..moveTo(pts[0].dx, pts[0].dy)
+          ..lineTo(pts[1].dx, pts[1].dy)
+          ..lineTo(pts[2].dx, pts[2].dy),
+        p,
+      );
+    }
+
+    final bottomCorners = [
       [
         Offset(pad, s.height - pad - l),
         Offset(pad, s.height - pad),
@@ -1884,7 +2096,9 @@ class _FP extends CustomPainter {
         Offset(s.width - pad, s.height - pad),
         Offset(s.width - pad, s.height - pad - l),
       ],
-    ]) {
+    ];
+
+    for (final pts in bottomCorners) {
       c.drawPath(
         Path()
           ..moveTo(pts[0].dx, pts[0].dy)
@@ -1896,70 +2110,7 @@ class _FP extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_FP o) => o.op != op;
-}
-
-class _ProcOverlay extends StatefulWidget {
-  const _ProcOverlay();
-  @override
-  State<_ProcOverlay> createState() => _ProcOverlayState();
-}
-
-class _ProcOverlayState extends State<_ProcOverlay>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _fadeCtrl;
-  late Animation<double> _fadeAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _fadeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _fadeCtrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _fadeCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => FadeTransition(
-    opacity: _fadeAnim,
-    child: Container(
-      color: const Color(0xCC000000),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 36,
-              height: 36,
-              child: CircularProgressIndicator(
-                color: C.primaryMid,
-                strokeWidth: 2.5,
-                backgroundColor: C.primaryMid.withOpacity(0.12),
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Analyzing your image…',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.4,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
+  bool shouldRepaint(_FP o) => o.op != op || o.busy != busy;
 }
 
 // ============================================================================
@@ -2055,7 +2206,7 @@ class _MultipleVariantsDlg extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'More than one camote variety was detected in this image. The scan has been rejected to ensure accuracy',
+            'More than one camote variety was detected in this image. The scan has been rejected to ensure accuracy.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: C.textSec, height: 1.55),
           ),
@@ -2135,7 +2286,7 @@ class _HowToDlg extends StatelessWidget {
                     _step(
                       2,
                       'Capture',
-                      'Tap "Take Photo" or pick an image from your gallery.',
+                      'Tap the shutter or pick an image from your gallery.',
                     ),
                     _step(
                       3,
@@ -2157,7 +2308,7 @@ class _HowToDlg extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            _dlgBtn('Got It', onTap: () => Navigator.pop(context)),
+            _dlgBtn('Got It!', onTap: () => Navigator.pop(context)),
           ],
         ),
       ),
@@ -2438,141 +2589,152 @@ class _ResultsPageState extends State<ResultsPage>
         child: SlideTransition(
           position: _slide,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             child: Column(
               children: [
-                // Image card
-                Container(
-                  height: 280,
+                SizedBox(
+                  height: 300,
                   width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.10),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: File(_r!.imagePath).existsSync()
-                        ? Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Image.file(
-                                File(_r!.imagePath),
-                                fit: BoxFit.cover,
-                              ),
-                              CustomPaint(painter: _BBPainter(det: top)),
-                            ],
-                          )
-                        : Container(
-                            color: C.bg,
-                            child: const Icon(
-                              Icons.image_not_supported,
-                              size: 56,
-                              color: C.textMuted,
-                            ),
+                  child: File(_r!.imagePath).existsSync()
+                      ? Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.file(File(_r!.imagePath), fit: BoxFit.cover),
+                            CustomPaint(painter: _BBPainter(det: top)),
+                          ],
+                        )
+                      : Container(
+                          color: C.bg,
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            size: 56,
+                            color: C.textMuted,
                           ),
-                  ),
+                        ),
                 ),
-
-                const SizedBox(height: 14),
-
-                // Identity card
-                _Card(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: _varietyAccent(top.className),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionHeader('Camote Variant'),
+                            const SizedBox(height: 14),
+                            const Divider(height: 1, color: C.border),
+                            const SizedBox(height: 14),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  variety?.name ?? top.className.cap,
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: C.textPrimary,
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: _varietyAccent(top.className),
+                                    shape: BoxShape.circle,
                                   ),
                                 ),
-                                if (variety != null) ...[
-                                  Text(
-                                    variety.commonName,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: C.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        variety?.name ?? top.className.cap,
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w800,
+                                          color: C.textPrimary,
+                                        ),
+                                      ),
+                                      if (variety != null) ...[
+                                        Text(
+                                          variety.commonName,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: C.primary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Text(
+                                          variety.scientificName,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: C.textSec,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                  Text(
-                                    variety.scientificName,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: C.textSec,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 18),
+                            const Divider(height: 1, color: C.border),
+                            const SizedBox(height: 16),
+                            _ConfBar(top.confidence),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 18),
-                      const Divider(height: 1, color: C.border),
-                      const SizedBox(height: 16),
-                      _ConfBar(top.confidence),
+                      if (variety != null) ...[
+                        const SizedBox(height: 12),
+                        _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionHeader('Overview'),
+                              const SizedBox(height: 10),
+                              Text(
+                                variety.description,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: C.textSec,
+                                  height: 1.6,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionHeader('Characteristics'),
+                              const SizedBox(height: 12),
+                              const Divider(height: 1, color: C.border),
+                              _CharRow(
+                                Icons.straighten,
+                                'Shape',
+                                variety.shape,
+                              ),
+                              const Divider(height: 1, color: C.border),
+                              _CharRow(
+                                Icons.palette_outlined,
+                                'Skin Color',
+                                variety.skinColor,
+                              ),
+                              const Divider(height: 1, color: C.border),
+                              _CharRow(
+                                Icons.circle_outlined,
+                                'Flesh Color',
+                                variety.fleshColor,
+                              ),
+                              const Divider(height: 1, color: C.border),
+                              _CharRow(
+                                Icons.texture,
+                                'Surface Texture',
+                                variety.texture,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-
-                if (variety != null) ...[
-                  const SizedBox(height: 12),
-                  _Card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _SectionHeader('Characteristics'),
-                        const SizedBox(height: 12),
-                        const Divider(height: 1, color: C.border),
-                        _CharRow(Icons.straighten, 'Shape', variety.shape),
-                        const Divider(height: 1, color: C.border),
-                        _CharRow(
-                          Icons.palette_outlined,
-                          'Skin Color',
-                          variety.skinColor,
-                        ),
-                        const Divider(height: 1, color: C.border),
-                        _CharRow(
-                          Icons.circle_outlined,
-                          'Flesh Color',
-                          variety.fleshColor,
-                        ),
-                        const Divider(height: 1, color: C.border),
-                        _CharRow(
-                          Icons.texture,
-                          'Surface Texture',
-                          variety.texture,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -2866,8 +3028,6 @@ class _HistoryPageState extends State<HistoryPage> {
   );
 }
 
-// ── History card — accent strip now uses _varietyAccent ──────────────────────
-
 class _HistoryCard extends StatelessWidget {
   final DetectionLog log;
   final DetectionResult? top;
@@ -2891,7 +3051,6 @@ class _HistoryCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Variety-coloured accent strip ─────────────────────────
           Container(
             width: 4,
             decoration: BoxDecoration(
@@ -2902,8 +3061,6 @@ class _HistoryCard extends StatelessWidget {
               ),
             ),
           ),
-
-          // ── Thumbnail ─────────────────────────────────────────────
           ClipRRect(
             borderRadius: BorderRadius.zero,
             child: SizedBox(
@@ -2920,8 +3077,6 @@ class _HistoryCard extends StatelessWidget {
                     ),
             ),
           ),
-
-          // ── Text content ──────────────────────────────────────────
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
@@ -2954,7 +3109,6 @@ class _HistoryCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 7),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Icon(
                         Icons.access_time_rounded,
@@ -2977,7 +3131,6 @@ class _HistoryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         TimeFormatter.rel(log.timestamp),
@@ -3014,8 +3167,6 @@ class _HistoryCard extends StatelessWidget {
               ),
             ),
           ),
-
-          // ── Delete button ─────────────────────────────────────────
           Container(
             width: 48,
             padding: const EdgeInsets.only(bottom: 12, right: 4),
@@ -3041,8 +3192,6 @@ class _HistoryCard extends StatelessWidget {
     ),
   );
 }
-
-// ── Detail bottom sheet ───────────────────────────────────────────────────────
 
 class _DetailSheet extends StatelessWidget {
   final DetectionLog log;
@@ -3156,7 +3305,6 @@ class _DetailSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-
                 if (top != null) ...[
                   _Card(
                     child: Column(
@@ -3170,7 +3318,6 @@ class _DetailSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                 ],
-
                 _Card(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -3221,7 +3368,6 @@ class _DetailSheet extends StatelessWidget {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
@@ -3271,44 +3417,7 @@ class LibraryPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: C.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: C.primary, width: 1.0),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: C.primaryLight,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Icon(
-                    Icons.info_outline,
-                    color: C.primary,
-                    size: 15,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'Doma can classify 4 varieties commonly found in Tacloban City.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: C.primary,
-                      height: 1.45,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 4),
           ...camoteVarieties.map((v) => _VarietyCard(v)),
         ],
       ),
@@ -3327,7 +3436,6 @@ class _VarietyCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Full-width image top
         ClipRRect(
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(13),
@@ -3348,7 +3456,6 @@ class _VarietyCard extends StatelessWidget {
             ),
           ),
         ),
-        // Text content below
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           child: Row(
@@ -3483,7 +3590,6 @@ class _VarietyCard extends StatelessWidget {
                 controller: sc,
                 padding: const EdgeInsets.all(20),
                 children: [
-                  // ── Image carousel ────────────────────────────────
                   _ImageCarousel(imagePaths: v.imagePaths),
                   const SizedBox(height: 16),
                   _Card(
@@ -3515,7 +3621,7 @@ class _VarietyCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _SectionHeader('Description'),
+                        const _SectionHeader('Overview'),
                         const SizedBox(height: 10),
                         Text(
                           v.description,
