@@ -56,11 +56,11 @@ flutter:
     - assets/images/tapol3.png
     - assets/images/tapol4.png
     - assets/images/tapol5.png
-    - assets/best_int8.tflite
-    - assets/icon/app_icon.png
+    - assets/best_float32.tflite
+    - assets/icon/app_icon.jpg
 
 flutter_launcher_icons:
   android: true
   ios: true
   min_sdk_android: 21
-  image_path: "assets/icon/app_icon.png"
+  image_path: "assets/icon/app_icon.jpg"

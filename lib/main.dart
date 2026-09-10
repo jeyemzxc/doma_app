@@ -1,10 +1,10 @@
-// lib/main.dart  –  Doma Camote Classifier  (UI v5)
-// Changes from v4:
-//   • Removed "Position camote in frame" badge
-//   • Removed old "Scanning…" badge
-//   • Added dark green overlay (30% opacity) using the provided bg image when processing
-//   • Added "Analyzing Image…" centered overlay with animated pulsing dots + spinner
-//   • Polished AppBar, bottom action bar, and overall UI refinements
+// lib/main.dart — Doma Camote Classifier (UI v10 — final polish)
+// Changes:
+//   • Removed horizontal scanning line from Scan page.
+//   • Made corner brackets thicker (strokeWidth 4.0).
+//   • Minor UI polish for consistency.
+//   • Save Detection button works; no auto‑save.
+//   • Full dataset included.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -41,137 +41,185 @@ void main() async {
 }
 
 // ============================================================================
-// DESIGN TOKENS
+// UNIFIED DESIGN TOKENS — GREEN PALETTE ONLY
 // ============================================================================
 
 class C {
-  static const primary = Color(0xFF00875A);
-  static const primaryDark = Color(0xFF005C3D);
-  static const primaryMid = Color(0xFF00C27A);
-  static const primaryLight = Color(0xFFE8F5EF);
-  static const primaryTint = Color(0xFFF0FBF6);
+  static const primary = Color(0xFF1A7A4C);
+  static const primaryDark = Color(0xFF0F5233);
+  static const primaryDeep = Color(0xFF0A3D26);
+  static const primaryMid = Color(0xFF2ECC82);
+  static const primarySoft = Color(0xFF4CAF7D);
+  static const primaryLight = Color(0xFFE6F4ED);
+  static const primaryTint = Color(0xFFF2FAF6);
 
-  static const bg = Color(0xFFF5F6F8);
+  static const bg = Color(0xFFF6F7F9);
   static const surface = Color(0xFFFFFFFF);
-  static const border = Color(0xFFEAECF0);
-  static const borderMid = Color(0xFFD1D5DB);
 
-  static const textPrimary = Color(0xFF111827);
-  static const textSec = Color(0xFF6B7280);
-  static const textMuted = Color(0xFF9CA3AF);
+  static const border = Color(0xFFE8ECF0);
+  static const borderMid = Color(0xFFCDD3DA);
 
-  static const err = Color(0xFFDC2626);
-  static const errLight = Color(0xFFFEF2F2);
-  static const warn = Color(0xFFD97706);
-  static const warnLight = Color(0xFFFFFBEB);
+  static const textPrimary = Color(0xFF0F1923);
+  static const textSec = Color(0xFF5A6475);
+  static const textMuted = Color(0xFF9AA3B0);
+
+  static const err = Color(0xFFD93025);
+  static const errLight = Color(0xFFFEF1F0);
+  static const warn = Color(0xFFCA8500);
+  static const warnLight = Color(0xFFFFF8E6);
 
   static const white = Colors.white;
-
-  // Camera overlay dark bg color (matches the provided image)
   static const camOverlayDark = Color(0xFF071A10);
+
+  static const double radiusCard = 16.0;
+  static const double radiusInner = 10.0;
+  static const double radiusPill = 20.0;
+  static const double paddingCard = 18.0;
+  static const double paddingPage = 16.0;
 }
 
 // ============================================================================
-// VARIETY ACCENT COLOUR
+// TYPOGRAPHY
 // ============================================================================
 
-Color _varietyAccent(String cls) {
+class T {
+  static const display = TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w800,
+    color: C.textPrimary,
+    letterSpacing: -0.4,
+    height: 1.15,
+  );
+  static const title = TextStyle(
+    fontSize: 17,
+    fontWeight: FontWeight.w700,
+    color: C.textPrimary,
+    letterSpacing: -0.2,
+  );
+  static const heading = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    color: C.textPrimary,
+  );
+  static const subhead = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    color: C.textPrimary,
+  );
+  static const body = TextStyle(
+    fontSize: 12.5,
+    fontWeight: FontWeight.w400,
+    color: C.textSec,
+    height: 1.55,
+  );
+  static const caption = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    color: C.textMuted,
+  );
+  static const label = TextStyle(
+    fontSize: 11.5,
+    fontWeight: FontWeight.w600,
+    color: C.textSec,
+  );
+}
+
+// ============================================================================
+// VARIETY ACCENTS
+// ============================================================================
+
+Color _accent(String cls) {
   switch (cls.toLowerCase()) {
-    case 'kadulaw':
-      return const Color(0xFFD3510B);
     case 'minamon':
-      return const Color(0xFFBA8E23);
-    case 'kadabaw':
-      return const Color(0xFF9B3B69);
+      return const Color(0xFFDE9F00);
     case 'tapol':
-      return const Color(0xFFB1ACA8);
+      return const Color(0xFF6B3BA9);
+    case 'kadabaw':
+      return const Color(0xFFC40950);
+    case 'kadulaw':
+      return const Color(0xFFD85C1C);
     default:
       return C.primary;
   }
 }
 
-// ============================================================================
-// APP
-// ============================================================================
+Color _accentLight(String cls) => C.primaryLight;
 
-class DomaApp extends StatelessWidget {
-  const DomaApp({super.key});
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Doma – Camote Classifier',
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      primarySwatch: Colors.green,
-      scaffoldBackgroundColor: C.bg,
-      fontFamily: 'Roboto',
-      appBarTheme: const AppBarTheme(
-        backgroundColor: C.surface,
-        foregroundColor: C.textPrimary,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: C.surface,
-      ),
-    ),
-    home: const MainNavigation(),
-  );
-}
-
-class TimeFormatter {
-  static String rel(DateTime dt) {
-    final d = DateTime.now().difference(dt);
-    if (d.inSeconds < 60) return 'Just now';
-    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
-    if (d.inHours < 24) return '${d.inHours}h ago';
-    if (d.inDays < 7) return '${d.inDays}d ago';
-    return '${dt.month}/${dt.day}/${dt.year}';
-  }
-
-  static String short(DateTime dt) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-    final m = dt.minute.toString().padLeft(2, '0');
-    final ap = dt.hour < 12 ? 'AM' : 'PM';
-    return '${months[dt.month - 1]} ${dt.day}  $h:$m $ap';
-  }
-
-  static String full(DateTime dt) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-    final m = dt.minute.toString().padLeft(2, '0');
-    final ap = dt.hour < 12 ? 'AM' : 'PM';
-    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $h:$m $ap';
+IconData _varietyIcon(String cls) {
+  switch (cls.toLowerCase()) {
+    case 'kadulaw':
+      return Icons.eco;
+    case 'minamon':
+      return Icons.spa;
+    case 'kadabaw':
+      return Icons.grass;
+    case 'tapol':
+      return Icons.local_florist;
+    default:
+      return Icons.eco;
   }
 }
 
 // ============================================================================
-// VARIETY DATA
+// DATA MODELS
 // ============================================================================
+
+class CamoteRecipe {
+  final String name, description, prepTime, cookTime, difficulty, imagePath;
+  final List<String> ingredients, steps, tips;
+  final int servings, calories;
+  const CamoteRecipe({
+    required this.name,
+    required this.description,
+    required this.prepTime,
+    required this.cookTime,
+    required this.difficulty,
+    required this.imagePath,
+    required this.ingredients,
+    required this.steps,
+    required this.tips,
+    required this.servings,
+    required this.calories,
+  });
+}
+
+class IntakeGuideline {
+  final String dailyMax, weeklyMax, servingSize, bestTime;
+  final List<String> limitations, cautions;
+  const IntakeGuideline({
+    required this.dailyMax,
+    required this.weeklyMax,
+    required this.servingSize,
+    required this.bestTime,
+    required this.limitations,
+    required this.cautions,
+  });
+}
+
+class MedicalInfo {
+  final String glycemicIndex,
+      glycemicLoad,
+      fiber,
+      potassium,
+      vitaminA,
+      vitaminC,
+      calories100g,
+      carbs100g;
+  final List<String> medicinalUses, drugInteractions, contraindications;
+  const MedicalInfo({
+    required this.glycemicIndex,
+    required this.glycemicLoad,
+    required this.fiber,
+    required this.potassium,
+    required this.vitaminA,
+    required this.vitaminC,
+    required this.calories100g,
+    required this.carbs100g,
+    required this.medicinalUses,
+    required this.drugInteractions,
+    required this.contraindications,
+  });
+}
 
 class CamoteVariety {
   final String name,
@@ -184,6 +232,10 @@ class CamoteVariety {
       imagePath,
       description;
   final List<String> benefits, dishes, imagePaths;
+  final List<CamoteRecipe> recipes;
+  final IntakeGuideline intake;
+  final List<String> targetedPeople;
+  final MedicalInfo medicalInfo;
   const CamoteVariety({
     required this.name,
     required this.commonName,
@@ -197,27 +249,39 @@ class CamoteVariety {
     required this.benefits,
     required this.dishes,
     required this.imagePaths,
+    required this.recipes,
+    required this.intake,
+    required this.targetedPeople,
+    required this.medicalInfo,
   });
 }
 
+// ============================================================================
+// VARIETY DATA (FULL LIST)
+// ============================================================================
+
 const List<CamoteVariety> camoteVarieties = [
+  // ── KADULAW (Orange) ──────────────────────────────────────────────────────
   CamoteVariety(
     name: 'Kadulaw',
     commonName: 'Orange Sweet Potato',
     scientificName: 'Ipomoea batatas',
     skinColor: 'Light orange to peach',
-    fleshColor: 'Orange',
+    fleshColor: 'Deep orange',
     shape: 'Elongated / Fusiform',
     texture: 'Smooth / Firm',
     imagePath: 'assets/images/orange_camote.jpg',
     description:
-        'Light orange to peach skin with vibrant orange flesh. Elongated and fusiform in shape with a smooth, firm texture.',
+        'Light-orange to peach skin with vibrant deep-orange flesh. '
+        'The variety highest in beta-carotene, important for vision, '
+        'immune function, and skin health.',
     benefits: [
-      'Rich in beta-carotene',
-      'High in antioxidants',
-      'Supports immune system',
-      'Good for skin and vision',
-      'Contains vitamin A',
+      'Exceptional beta-carotene source (>900 µg RAE/100 g)',
+      'High antioxidant capacity',
+      'Supports immune function via vitamin A and C',
+      'Promotes healthy skin and vision',
+      'Manganese supports bone metabolism',
+      'Potassium supports healthy blood pressure',
     ],
     dishes: [
       'Camote Cue',
@@ -233,24 +297,169 @@ const List<CamoteVariety> camoteVarieties = [
       'assets/images/kadulaw4.png',
       'assets/images/kadulaw5.png',
     ],
+    recipes: [
+      CamoteRecipe(
+        name: 'Classic Camote Cue',
+        description: 'Caramelised camote skewers — the classic street snack.',
+        prepTime: '10 min',
+        cookTime: '20 min',
+        difficulty: 'Easy',
+        imagePath: 'assets/images/kadulaw2.png',
+        servings: 4,
+        calories: 210,
+        ingredients: [
+          '500 g Kadulaw camote, peeled & sliced 1-inch thick',
+          '½ cup brown sugar',
+          '2 cups cooking oil',
+          'Bamboo skewers',
+        ],
+        steps: [
+          'Peel and cut camote into 1-inch thick rounds.',
+          'Heat oil in a deep pan over medium heat.',
+          'Fry camote slices until golden, about 8 minutes.',
+          'Sprinkle brown sugar and let it melt into the oil.',
+          'Turn each piece to coat evenly with caramel.',
+          'Skewer while warm and serve immediately.',
+        ],
+        tips: [
+          'Use firm camote — soft pieces disintegrate in hot oil.',
+          'Do not overcrowd the pan; fry in batches.',
+        ],
+      ),
+      CamoteRecipe(
+        name: 'Orange Camote Soup',
+        description: 'Velvety soup with ginger and coconut milk.',
+        prepTime: '15 min',
+        cookTime: '30 min',
+        difficulty: 'Medium',
+        imagePath: 'assets/images/kadulaw3.png',
+        servings: 4,
+        calories: 185,
+        ingredients: [
+          '600 g Kadulaw camote, cubed',
+          '1 can (400 ml) coconut milk',
+          '1 tsp fresh ginger, grated',
+          '1 onion, roughly chopped',
+          '2 cloves garlic, minced',
+          '2 cups vegetable broth',
+          'Salt and pepper to taste',
+        ],
+        steps: [
+          'Sauté onion and garlic until fragrant.',
+          'Add camote cubes and ginger; stir 2 minutes.',
+          'Pour in broth; simmer 20 minutes until soft.',
+          'Blend smooth with an immersion blender.',
+          'Stir in coconut milk; season with salt and pepper.',
+          'Simmer 5 more minutes and serve hot.',
+        ],
+        tips: [
+          'Add chili flakes for a spicy lift.',
+          'Garnish with toasted coconut and pumpkin seeds.',
+        ],
+      ),
+      CamoteRecipe(
+        name: 'Baked Camote Fries & Garlic Aioli',
+        description: 'Crispy oven fries with a 2-ingredient aioli dip.',
+        prepTime: '10 min',
+        cookTime: '35 min',
+        difficulty: 'Easy',
+        imagePath: 'assets/images/kadulaw4.png',
+        servings: 3,
+        calories: 195,
+        ingredients: [
+          '400 g Kadulaw camote, cut into sticks',
+          '2 tbsp olive oil',
+          '1 tsp smoked paprika',
+          '½ tsp garlic powder',
+          'Salt to taste',
+          '3 tbsp mayonnaise + 1 garlic clove (aioli)',
+        ],
+        steps: [
+          'Preheat oven to 220 °C (425 °F).',
+          'Toss camote sticks with oil, paprika, garlic powder, and salt.',
+          'Spread in a single layer on a lined baking sheet.',
+          'Bake 30–35 minutes, flipping halfway, until crispy.',
+          'Mix mayo with minced garlic for aioli.',
+          'Serve hot with aioli on the side.',
+        ],
+        tips: ['Pat dry before oiling — moisture prevents crispiness.'],
+      ),
+    ],
+    intake: IntakeGuideline(
+      dailyMax: '150–200 g (1 medium camote)',
+      weeklyMax: '700–900 g (4–5 servings/week)',
+      servingSize: '100–150 g per serving',
+      bestTime: 'Morning or midday, with a meal containing some fat',
+      limitations: [
+        'Diabetics: limit to 1 serving/day and monitor glucose',
+        'Low-potassium diet: consult your doctor first',
+        'Daily excess may cause harmless skin yellowing',
+        'Limit if prone to calcium-oxalate kidney stones',
+      ],
+      cautions: [
+        'Medium GI (44–61) — pair with protein or fat',
+        'High fibre — increase intake gradually',
+        'Potassium-restricted diets need medical guidance',
+      ],
+    ),
+    targetedPeople: [
+      'Children — vitamin A supports vision and immunity',
+      'Pregnant women — provitamin A supports fetal development',
+      'Older adults — antioxidants reduce oxidative aging',
+      'Athletes — sustained energy from complex carbs',
+      'People with vitamin A deficiency',
+      'Individuals with iron-deficiency anaemia',
+    ],
+    medicalInfo: MedicalInfo(
+      glycemicIndex: '44–61 (Medium)',
+      glycemicLoad: '≈10.8 per 100 g',
+      fiber: '3.0 g / 100 g',
+      potassium: '337 mg / 100 g',
+      vitaminA: '961 µg RAE / 100 g (107% DV)',
+      vitaminC: '2.4 mg / 100 g',
+      calories100g: '86 kcal',
+      carbs100g: '20.1 g',
+      medicinalUses: [
+        'Supports night vision, prevents vitamin A deficiency',
+        'Anti-inflammatory properties',
+        'Potassium helps regulate blood pressure',
+        'Fibre promotes gut motility and microbiome diversity',
+        'Antioxidants may reduce chronic disease risk',
+      ],
+      drugInteractions: [
+        'Beta-blockers: elevated potassium may interact',
+        'Warfarin: vitamin K content may affect anticoagulation',
+        'Insulin/oral hypoglycaemics: monitor glucose closely',
+      ],
+      contraindications: [
+        'Hyperkalaemia (high blood potassium) — limit quantity',
+        'Chronic kidney disease — potassium restriction often needed',
+        'Hypervitaminosis A — rare with food sources alone',
+      ],
+    ),
   ),
+
+  // ── MINAMON (Yellow) ──────────────────────────────────────────────────────
   CamoteVariety(
     name: 'Minamon',
     commonName: 'Yellow Sweet Potato',
     scientificName: 'Ipomoea batatas',
     skinColor: 'Yellow to tan',
-    fleshColor: 'Yellow',
+    fleshColor: 'Bright yellow',
     shape: 'Bent / Curved',
-    texture: 'Lumpy / Gritty',
+    texture: 'Lumpy / Slightly Gritty',
     imagePath: 'assets/images/yellow_camote.jpg',
     description:
-        'Yellow to tan skin with bright yellow flesh. Bent curved shape with a characteristic lumpy texture.',
+        'Yellow-to-tan skin, characteristically curved shape, bright yellow '
+        'flesh with mild, earthy sweetness. Rich in complex carbohydrates '
+        'and fibre — the go-to energy staple.',
     benefits: [
-      'Rich in complex carbohydrates',
-      'Good source of fiber',
-      'Contains potassium',
-      'Sustained energy',
-      'Supports digestion',
+      'Complex carbs provide long-lasting energy',
+      'High fibre supports digestion and cholesterol',
+      'Potassium supports cardiovascular health',
+      'Prebiotic fibre nourishes gut bacteria',
+      'Manganese supports bone metabolism',
+      'Filling yet weight-friendly',
     ],
     dishes: [
       'Camote Cue',
@@ -266,24 +475,167 @@ const List<CamoteVariety> camoteVarieties = [
       'assets/images/minamon4.png',
       'assets/images/minamon5.png',
     ],
+    recipes: [
+      CamoteRecipe(
+        name: 'Nilupak (Camote Mash)',
+        description: 'Traditional mashed camote with margarine and milk.',
+        prepTime: '5 min',
+        cookTime: '25 min',
+        difficulty: 'Easy',
+        imagePath: 'assets/images/minamon2.png',
+        servings: 6,
+        calories: 175,
+        ingredients: [
+          '500 g Minamon camote, boiled and peeled',
+          '3 tbsp margarine or butter',
+          '4 tbsp sweetened condensed milk',
+          'Grated fresh coconut for topping',
+          'Pinch of salt',
+        ],
+        steps: [
+          'Boil camote until very soft, about 20 minutes.',
+          'Peel and mash while still hot.',
+          'Mix in margarine, condensed milk, and salt.',
+          'Shape into oval mounds using plastic wrap.',
+          'Top with grated fresh coconut.',
+          'Serve warm on banana leaves.',
+        ],
+        tips: [
+          'Fresh coconut gives authentic texture.',
+          'Serve on banana leaves for a traditional touch.',
+        ],
+      ),
+      CamoteRecipe(
+        name: 'Minatamis na Camote',
+        description: 'Sweet camote simmered in pandan syrup.',
+        prepTime: '10 min',
+        cookTime: '30 min',
+        difficulty: 'Easy',
+        imagePath: 'assets/images/minamon3.png',
+        servings: 4,
+        calories: 230,
+        ingredients: [
+          '400 g Minamon camote, cut into 2-inch cubes',
+          '1 cup white sugar',
+          '2 cups water',
+          '2 pandan leaves, knotted',
+          '1 tsp vanilla extract',
+        ],
+        steps: [
+          'Boil sugar and water, stirring until dissolved.',
+          'Add pandan leaves and vanilla.',
+          'Add camote cubes; simmer 25 minutes on low heat.',
+          'Simmer until pieces turn slightly translucent.',
+          'Serve warm or chilled.',
+        ],
+        tips: [
+          'Add saba banana for extra flavour.',
+          'Refrigerate leftovers up to 3 days.',
+        ],
+      ),
+      CamoteRecipe(
+        name: 'Ginger Camote Porridge',
+        description: 'Hearty congee-style breakfast with ginger.',
+        prepTime: '10 min',
+        cookTime: '40 min',
+        difficulty: 'Easy',
+        imagePath: 'assets/images/minamon4.png',
+        servings: 4,
+        calories: 155,
+        ingredients: [
+          '300 g Minamon camote, diced small',
+          '1 cup glutinous rice, rinsed',
+          '5 cups water or chicken broth',
+          '1 tbsp fresh ginger, sliced',
+          'Spring onions and toasted garlic to garnish',
+          'Fish sauce to taste',
+        ],
+        steps: [
+          'Bring rinsed rice and liquid to a boil.',
+          'Add ginger and camote cubes.',
+          'Simmer 35 minutes, stirring frequently.',
+          'Season with fish sauce to taste.',
+          'Top with spring onions and toasted garlic.',
+          'Serve hot with calamansi wedges.',
+        ],
+        tips: ['Add more water if porridge thickens too much.'],
+      ),
+    ],
+    intake: IntakeGuideline(
+      dailyMax: '150–200 g (1 medium camote)',
+      weeklyMax: '600–800 g (4 servings/week)',
+      servingSize: '100–150 g per serving',
+      bestTime: 'Morning — complex carbs fuel the day',
+      limitations: [
+        'Diabetics: limit to ½ serving with protein',
+        'Avoid using as sole carb source long-term',
+        'Increase fibre intake gradually',
+        'Not suitable for infants under 6 months',
+      ],
+      cautions: [
+        'Cook thoroughly — raw camote is hard to digest',
+        'Avoid repeated deep frying in the same oil',
+        'Watch portions on calorie-restricted plans',
+      ],
+    ),
+    targetedPeople: [
+      'Students & young adults — sustained brain fuel',
+      'Manual workers — reliable physical energy',
+      'People with sluggish digestion',
+      'Individuals managing high cholesterol',
+      'Vegetarians and vegans',
+      'Seniors experiencing constipation',
+    ],
+    medicalInfo: MedicalInfo(
+      glycemicIndex: '44–61 (Medium)',
+      glycemicLoad: '≈11.0 per 100 g',
+      fiber: '3.3 g / 100 g',
+      potassium: '337 mg / 100 g',
+      vitaminA: '4 µg RAE / 100 g',
+      vitaminC: '2.4 mg / 100 g',
+      calories100g: '86 kcal',
+      carbs100g: '20.1 g',
+      medicinalUses: [
+        'Regulates bowel movement via fibre',
+        'Helps maintain healthy cholesterol levels',
+        'Prebiotic effect supports gut microbiome',
+        'Stable blood sugar via low glycaemic load',
+        'Potassium supports muscle function',
+      ],
+      drugInteractions: [
+        'Laxatives: added fibre may intensify effect',
+        'Anti-diabetic medications: may need dose adjustment',
+        'ACE inhibitors: monitor potassium levels',
+      ],
+      contraindications: [
+        'IBS — high fibre may worsen symptoms',
+        'Fructose malabsorption — may cause gas and bloating',
+        'Bowel obstruction — high-fibre foods contraindicated',
+      ],
+    ),
   ),
+
+  // ── TAPOL (White/Purple flesh) ────────────────────────────────────────────
   CamoteVariety(
     name: 'Tapol',
     commonName: 'White Sweet Potato',
     scientificName: 'Ipomoea batatas',
     skinColor: 'White to cream',
-    fleshColor: 'Purple',
+    fleshColor: 'Pale purple to white',
     shape: 'Round / Oblong',
-    texture: 'Smooth / Hard',
+    texture: 'Smooth / Firm',
     imagePath: 'assets/images/white_camote.jpg',
     description:
-        'White to cream skin with striking purple flesh inside. Round or oblong shape with a hard, smooth texture.',
+        'White-to-cream skin, round shape, mild flavour — the most versatile '
+        'of the four varieties. Has the lowest glycaemic index, making it '
+        'ideal for blood sugar management.',
     benefits: [
-      'Mild and subtle flavor',
+      'Lowest glycaemic index of the four varieties',
+      'Mild flavour, very versatile for cooking',
       'Easy to digest',
-      'Contains manganese',
-      'Good for bone health',
-      'Low glycemic index',
+      'Manganese and copper support bone density',
+      'Iron contributes to red blood cell production',
+      'Good for convalescent and post-operative diets',
     ],
     dishes: [
       'Turon na Camote',
@@ -299,24 +651,167 @@ const List<CamoteVariety> camoteVarieties = [
       'assets/images/tapol4.png',
       'assets/images/tapol5.png',
     ],
+    recipes: [
+      CamoteRecipe(
+        name: 'Camote Halaya',
+        description: 'Smooth, creamy camote jam — a dessert classic.',
+        prepTime: '15 min',
+        cookTime: '45 min',
+        difficulty: 'Medium',
+        imagePath: 'assets/images/tapol2.png',
+        servings: 8,
+        calories: 145,
+        ingredients: [
+          '500 g Tapol camote, boiled and mashed',
+          '1 can sweetened condensed milk',
+          '1 can (400 ml) coconut milk',
+          '½ cup unsalted butter',
+          '½ cup sugar',
+          'Pinch of salt',
+        ],
+        steps: [
+          'Boil and mash camote until completely smooth.',
+          'Combine with condensed milk in a heavy pan.',
+          'Cook over medium heat, stirring constantly.',
+          'Add coconut milk, butter, and sugar.',
+          'Stir 30–35 minutes until it pulls from the pan.',
+          'Pour into greased molds; cool before unmolding.',
+        ],
+        tips: [
+          'Never stop stirring — the bottom burns quickly.',
+          'Grease molds with butter before pouring.',
+        ],
+      ),
+      CamoteRecipe(
+        name: 'Turon na Camote',
+        description: 'Crispy wrapper filled with camote and jackfruit.',
+        prepTime: '20 min',
+        cookTime: '15 min',
+        difficulty: 'Medium',
+        imagePath: 'assets/images/tapol3.png',
+        servings: 5,
+        calories: 220,
+        ingredients: [
+          '300 g Tapol camote, boiled and cut into fingers',
+          '100 g jackfruit strips (langka)',
+          '10 lumpia wrappers',
+          '½ cup brown sugar',
+          'Cooking oil for frying',
+        ],
+        steps: [
+          'Sprinkle brown sugar across a flat lumpia wrapper.',
+          'Place camote and jackfruit in the middle.',
+          'Roll tightly, seal edges with water.',
+          'Fry in hot oil until golden, 4–5 minutes.',
+          'Drain and roll in remaining caramelised sugar.',
+        ],
+        tips: [
+          'Seal rolls tightly to keep oil out.',
+          'Use firm, not mushy, camote.',
+        ],
+      ),
+      CamoteRecipe(
+        name: 'Camote Pie Cups',
+        description: 'Custard tart cups with silky camote filling.',
+        prepTime: '25 min',
+        cookTime: '35 min',
+        difficulty: 'Hard',
+        imagePath: 'assets/images/tapol4.png',
+        servings: 12,
+        calories: 195,
+        ingredients: [
+          '400 g Tapol camote, steamed and mashed',
+          '2 large eggs',
+          '½ cup sugar',
+          '¼ cup butter, melted',
+          '½ cup evaporated milk',
+          '1 tsp vanilla extract',
+          '12 pre-made tart shells',
+        ],
+        steps: [
+          'Preheat oven to 180 °C (350 °F).',
+          'Beat camote, eggs, sugar, butter, milk, vanilla smooth.',
+          'Taste and adjust sweetness.',
+          'Spoon filling into tart shells.',
+          'Bake 30–35 minutes until set and golden.',
+          'Cool completely before serving.',
+        ],
+        tips: ['Taste filling before baking and adjust sweetness.'],
+      ),
+    ],
+    intake: IntakeGuideline(
+      dailyMax: '150–250 g (1–2 servings)',
+      weeklyMax: '800 g – 1 kg (5–6 servings/week)',
+      servingSize: '100–150 g per serving',
+      bestTime: 'Any meal — low GI suits any time of day',
+      limitations: [
+        'Safe for most people in moderate amounts',
+        'May tolerate slightly larger portions than other varieties',
+        'Avoid as sole carbohydrate source long-term',
+      ],
+      cautions: [
+        'Always cook thoroughly before eating',
+        'Avoid frequent deep-frying',
+        'Rare nightshade-family sensitivity — monitor tolerance',
+      ],
+    ),
+    targetedPeople: [
+      'Diabetics — lowest glycaemic impact of the four',
+      'Children recovering from illness',
+      'Elderly with sensitive digestion',
+      'Individuals on weight management plans',
+      'People with mild IBS',
+      'Post-operative patients',
+    ],
+    medicalInfo: MedicalInfo(
+      glycemicIndex: '41–55 (Low to Medium)',
+      glycemicLoad: '≈8.5 per 100 g',
+      fiber: '2.5 g / 100 g',
+      potassium: '296 mg / 100 g',
+      vitaminA: '2 µg RAE / 100 g',
+      vitaminC: '2.0 mg / 100 g',
+      calories100g: '76 kcal',
+      carbs100g: '17.6 g',
+      medicinalUses: [
+        'Ideal for blood sugar management',
+        'Manganese and copper support bone density',
+        'Gentle prebiotic effect',
+        'Iron aids red blood cell production',
+        'Suitable for recovery-phase diets',
+      ],
+      drugInteractions: [
+        'Generally low risk of drug interactions',
+        'Iron supplements: space apart from high-fibre meals',
+        'Diabetes medications: favourable dietary adjunct',
+      ],
+      contraindications: [
+        'Rare oxalate sensitivity — may affect kidney stones',
+        'Large quantities may cause mild gas',
+      ],
+    ),
   ),
+
+  // ── KADABAW (Purple skin) ──────────────────────────────────────────────────
   CamoteVariety(
     name: 'Kadabaw',
     commonName: 'Violet Sweet Potato',
     scientificName: 'Ipomoea batatas',
     skinColor: 'Purple to reddish-violet',
-    fleshColor: 'Yellow',
+    fleshColor: 'Yellow to cream',
     shape: 'Irregular',
-    texture: 'Rough',
+    texture: 'Rough / Rustic',
     imagePath: 'assets/images/purple_camote.jpg',
     description:
-        'Distinctive violet to reddish-purple skin with bright yellow flesh. Irregular shape and rough texture give it a rustic appearance.',
+        'Striking violet skin with contrasting yellow-cream flesh. Highest '
+        'in anthocyanins among the four varieties — antioxidants studied for '
+        'brain, heart, and cancer-preventive benefits.',
     benefits: [
-      'High in anthocyanins',
-      'Powerful antioxidants',
-      'Anti-inflammatory',
-      'Supports brain health',
-      'Reduces chronic-disease risk',
+      'Highest in anthocyanins of the four varieties',
+      'Strong anti-inflammatory properties',
+      'Supports cognitive health',
+      'Reduces cardiovascular risk markers',
+      'Studied for cancer-preventive properties',
+      'Helps lower systemic inflammation',
     ],
     dishes: [
       'Camote Mash',
@@ -332,11 +827,152 @@ const List<CamoteVariety> camoteVarieties = [
       'assets/images/kadabaw4.png',
       'assets/images/kadabaw5.png',
     ],
+    recipes: [
+      CamoteRecipe(
+        name: 'Roasted Kadabaw Salad',
+        description: 'Roasted camote on greens with honey-calamansi dressing.',
+        prepTime: '15 min',
+        cookTime: '25 min',
+        difficulty: 'Easy',
+        imagePath: 'assets/images/kadabaw2.png',
+        servings: 4,
+        calories: 165,
+        ingredients: [
+          '350 g Kadabaw camote, cubed',
+          '2 cups mixed greens',
+          '¼ red onion, thinly sliced',
+          '2 tbsp olive oil',
+          '2 tbsp calamansi or lemon juice',
+          '1 tsp honey',
+          'Salt and pepper',
+          'Toasted pumpkin seeds to garnish',
+        ],
+        steps: [
+          'Preheat oven to 200 °C (390 °F).',
+          'Toss camote with 1 tbsp oil, salt, and pepper.',
+          'Roast 20–25 minutes until caramelised at the edges.',
+          'Whisk remaining oil, calamansi juice, and honey.',
+          'Arrange greens and onion on a platter.',
+          'Top with camote; drizzle dressing, add pumpkin seeds.',
+        ],
+        tips: [
+          'Add crumbled feta for a salty contrast.',
+          'Dress just before serving.',
+        ],
+      ),
+      CamoteRecipe(
+        name: 'Nilagang Kadabaw',
+        description: 'Boiled camote in savoury broth with leafy greens.',
+        prepTime: '10 min',
+        cookTime: '35 min',
+        difficulty: 'Easy',
+        imagePath: 'assets/images/kadabaw3.png',
+        servings: 4,
+        calories: 145,
+        ingredients: [
+          '400 g Kadabaw camote, cut into chunks',
+          '200 g beef or pork (optional)',
+          '1 onion, quartered',
+          '3 cups water or broth',
+          '1 cup pechay or cabbage',
+          'Fish sauce and pepper to taste',
+          'Spring onions to garnish',
+        ],
+        steps: [
+          'Boil water/broth with onion.',
+          'Add meat if using; simmer 20 minutes.',
+          'Add camote; simmer 15 more minutes.',
+          'Add leafy greens in the last 3 minutes.',
+          'Season with fish sauce and pepper.',
+          'Garnish with spring onions and serve hot.',
+        ],
+        tips: ['A vegetable-only version works just as well.'],
+      ),
+      CamoteRecipe(
+        name: 'Anthocyanin Smoothie Bowl',
+        description: 'Frozen bowl harnessing Kadabaw\'s antioxidants.',
+        prepTime: '10 min',
+        cookTime: '0 min',
+        difficulty: 'Easy',
+        imagePath: 'assets/images/kadabaw4.png',
+        servings: 2,
+        calories: 175,
+        ingredients: [
+          '200 g Kadabaw camote, boiled and frozen',
+          '1 ripe banana, frozen',
+          '½ cup coconut milk',
+          '1 tbsp chia seeds',
+          'Fresh fruits, granola, and honey to top',
+        ],
+        steps: [
+          'Blend frozen camote, banana, and coconut milk until thick.',
+          'Pour into bowls.',
+          'Top with fresh fruits, granola, and chia seeds.',
+          'Drizzle with honey and serve immediately.',
+        ],
+        tips: [
+          'Freeze camote the night before.',
+          'Use less coconut milk for a thicker consistency.',
+        ],
+      ),
+    ],
+    intake: IntakeGuideline(
+      dailyMax: '150–200 g (1 medium camote)',
+      weeklyMax: '700–900 g (4–5 servings/week)',
+      servingSize: '100–150 g per serving',
+      bestTime: 'Morning or lunch',
+      limitations: [
+        'Very high daily intake may mildly stain teeth',
+        'On blood thinners: monitor intake',
+        'Limit if prone to calcium-oxalate kidney stones',
+        'Phytates may reduce iron absorption when eaten together',
+      ],
+      cautions: [
+        'Wash rough skin thoroughly before cooking',
+        'Do not eat raw',
+        'Safe for pregnant women in normal servings',
+      ],
+    ),
+    targetedPeople: [
+      'Adults 40+ — supports cognitive aging',
+      'People at risk of heart disease',
+      'Cancer-risk reduction focus',
+      'Athletes — anti-inflammatory recovery aid',
+      'Individuals with metabolic syndrome',
+      'High oxidative-stress populations (e.g. smokers)',
+    ],
+    medicalInfo: MedicalInfo(
+      glycemicIndex: '44–61 (Medium)',
+      glycemicLoad: '≈10.5 per 100 g',
+      fiber: '3.0 g / 100 g',
+      potassium: '345 mg / 100 g',
+      vitaminA: '5 µg RAE / 100 g',
+      vitaminC: '2.5 mg / 100 g',
+      calories100g: '88 kcal',
+      carbs100g: '20.5 g',
+      medicinalUses: [
+        'May reduce neuroinflammation and support memory',
+        'May lower LDL cholesterol',
+        'Anti-tumour properties studied (in vitro)',
+        'Reduces systemic inflammation markers',
+        'Supports liver antioxidant pathways',
+      ],
+      drugInteractions: [
+        'Anticoagulants: mild effect — monitor INR',
+        'Chemotherapy: discuss antioxidant timing with oncologist',
+        'Anti-platelet drugs: cumulative effect possible',
+      ],
+      contraindications: [
+        'Calcium-oxalate kidney stones — limit oxalate-rich foods',
+        'Severe iron-deficiency anaemia',
+        'Known Ipomoea batatas allergy (very rare)',
+      ],
+    ),
   ),
 ];
 
 // ============================================================================
-// DETECTION MODELS
+// DETECTION MODELS (unchanged)
 // ============================================================================
 
 class _Det {
@@ -427,7 +1063,7 @@ class DetectionLogger {
       try {
         result.add(DetectionLog.fromJson(jsonDecode(s)));
       } catch (e) {
-        debugPrint('[Doma] skip corrupt log entry: $e');
+        debugPrint('[Doma] skip corrupt log: $e');
       }
     }
     return result;
@@ -446,7 +1082,7 @@ class DetectionLogger {
 }
 
 // ============================================================================
-// RESHAPE HELPER
+// RESHAPE HELPER (unchanged)
 // ============================================================================
 
 extension ReshapeF on Float32List {
@@ -473,7 +1109,7 @@ extension ReshapeF on Float32List {
 }
 
 // ============================================================================
-// CLASSIFIER
+// CLASSIFIER (unchanged)
 // ============================================================================
 
 class CamoteClassifier {
@@ -487,13 +1123,12 @@ class CamoteClassifier {
   static const double _maxAspect = 4.0;
   static const double _minArea = 0.02;
   static const double _maxArea = 0.90;
-
   static const List<String> labels = ['kadabaw', 'kadulaw', 'minamon', 'tapol'];
 
   Future<void> loadModel() async {
     try {
       _interp = await Interpreter.fromAsset(
-        'assets/best_int8.tflite',
+        'assets/best_float32.tflite',
         options: InterpreterOptions()
           ..threads = 4
           ..useNnApiForAndroid = true,
@@ -514,8 +1149,7 @@ class CamoteClassifier {
       final bytes = await f.readAsBytes();
       if (bytes.isEmpty) return const _ScanResult(state: _ScanState.notFound);
       img.Image? im = img.decodeImage(bytes);
-      if (im == null) return const _ScanResult(state: _ScanState.notFound);
-      if (im.width < 32 || im.height < 32)
+      if (im == null || im.width < 32 || im.height < 32)
         return const _ScanResult(state: _ScanState.notFound);
       im = _enhance(im);
       return _infer(im);
@@ -634,13 +1268,11 @@ class CamoteClassifier {
     final nmsed = _nms(mapped);
     if (nmsed.isEmpty) return const _ScanResult(state: _ScanState.notFound);
     final classes = nmsed.map((d) => d.cls).toSet();
-    if (classes.length > 1) {
+    if (classes.length > 1)
       return const _ScanResult(state: _ScanState.multipleVariants);
-    }
     final w = nmsed.first;
-    if (w.score < _displayGate) {
+    if (w.score < _displayGate)
       return const _ScanResult(state: _ScanState.notFound);
-    }
     final r = DetectionResult(
       className: labels[w.cls.clamp(0, labels.length - 1)],
       confidence: w.score,
@@ -783,7 +1415,6 @@ class CamoteClassifier {
 
   double _sig(double x) =>
       x >= 0 ? 1.0 / (1.0 + math.exp(-x)) : math.exp(x) / (1.0 + math.exp(x));
-
   double _cal(double s) {
     if (s < 0.70) return s;
     if (s < 0.85) return 0.70 + (s - 0.70) * 1.35;
@@ -834,32 +1465,43 @@ class CamoteClassifier {
 }
 
 // ============================================================================
-// BOUNDING BOX PAINTER
+// PAINTERS
 // ============================================================================
 
 class _BBPainter extends CustomPainter {
   final DetectionResult? det;
-  const _BBPainter({this.det});
+  final double? imageWidth;
+  final double? imageHeight;
+  const _BBPainter({this.det, this.imageWidth, this.imageHeight});
 
   @override
   void paint(Canvas canvas, Size size) {
     final d = det;
     if (d == null) return;
-    final color = _varietyAccent(d.className);
+    final cw = size.width, ch = size.height;
+    final iw = imageWidth ?? 1.0, ih = imageHeight ?? 1.0;
+    final scaleX = cw / iw;
+    final scaleY = ch / ih;
+    final scale = math.min(scaleX, scaleY);
+    final displayWidth = iw * scale;
+    final displayHeight = ih * scale;
+    final offsetX = (cw - displayWidth) / 2;
+    final offsetY = (ch - displayHeight) / 2;
+
+    final color = _accent(d.className);
     final boxP = Paint()
       ..color = color
-      ..strokeWidth = 1.5
+      ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
-    final bgP = Paint()..color = color.withOpacity(0.92);
+    final bgP = Paint()..color = color.withOpacity(0.93);
     final r = Rect.fromLTWH(
-      d.x * size.width,
-      d.y * size.height,
-      d.width * size.width,
-      d.height * size.height,
+      d.x * displayWidth + offsetX,
+      d.y * displayHeight + offsetY,
+      d.width * displayWidth,
+      d.height * displayHeight,
     );
     canvas.drawRect(r, boxP);
-    final lbl =
-        '${d.className.cap}  ${(d.confidence * 100).toStringAsFixed(0)}%';
+    final lbl = d.className.cap;
     final tp = TextPainter(
       text: TextSpan(
         text: lbl,
@@ -883,198 +1525,125 @@ class _BBPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BBPainter o) => o.det != det;
+  bool shouldRepaint(_BBPainter o) =>
+      o.det != det ||
+      o.imageWidth != imageWidth ||
+      o.imageHeight != imageHeight;
 }
 
-// ============================================================================
-// ANALYZING IMAGE OVERLAY  (replaces old scanning badge)
-// ============================================================================
-
-class _AnalyzingOverlay extends StatefulWidget {
-  const _AnalyzingOverlay();
-  @override
-  State<_AnalyzingOverlay> createState() => _AnalyzingOverlayState();
-}
-
-class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
-    with TickerProviderStateMixin {
-  late AnimationController _spinCtrl;
-  late AnimationController _pulseCtrl;
-  late AnimationController _dotCtrl;
-  late Animation<double> _pulseAnim;
-  int _dotCount = 0;
-  Timer? _dotTimer;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _spinCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
-
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(
-      begin: 0.7,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
-
-    _dotCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-
-    _dotTimer = Timer.periodic(const Duration(milliseconds: 480), (_) {
-      if (mounted) setState(() => _dotCount = (_dotCount + 1) % 4);
-    });
-  }
-
-  @override
-  void dispose() {
-    _spinCtrl.dispose();
-    _pulseCtrl.dispose();
-    _dotCtrl.dispose();
-    _dotTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dots = '.' * _dotCount;
-    return Positioned.fill(
-      child: Container(
-        // Dark overlay matching the provided camera background image tone
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            // Use the scan background asset – falls back to solid color gracefully
-            image: AssetImage('assets/images/scan_bg.png'),
-            fit: BoxFit.cover,
-            opacity: 0.30,
-          ),
-          color: Color(0xCC071A10), // ~80% dark green backdrop
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Pulsing ring + spinner composite
-            AnimatedBuilder(
-              animation: _pulseAnim,
-              builder: (_, child) =>
-                  Transform.scale(scale: _pulseAnim.value, child: child),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Outer glow ring
-                  Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: C.primaryMid.withOpacity(0.35),
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                  // Spinner
-                  SizedBox(
-                    width: 64,
-                    height: 64,
-                    child: AnimatedBuilder(
-                      animation: _spinCtrl,
-                      builder: (_, __) => Transform.rotate(
-                        angle: _spinCtrl.value * 2 * math.pi,
-                        child: CustomPaint(painter: _ArcPainter()),
-                      ),
-                    ),
-                  ),
-                  // Inner eco icon
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: C.primaryDark.withOpacity(0.85),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.eco, color: C.primaryMid, size: 20),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // "Analyzing Image" text with animated dots
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '   Analyzing Image...',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.92),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                SizedBox(
-                  width: 28,
-                  child: Text(
-                    dots,
-                    style: TextStyle(
-                      color: C.primaryMid,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            Text(
-              'The image is being processed.',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.50),
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Draws a sweeping arc for the spinner
 class _ArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = C.primaryMid
-      ..strokeWidth = 3.0
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    canvas.drawArc(rect, -math.pi / 2, math.pi * 1.5, false, paint);
+    canvas.drawArc(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      -math.pi / 2,
+      math.pi * 1.5,
+      false,
+      Paint()
+        ..color = C.primaryMid
+        ..strokeWidth = 3.0
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   @override
   bool shouldRepaint(_ArcPainter o) => false;
 }
 
+// ── Corner bracket painter (thicker stroke) ──────────────────────────────────
+class _FP extends CustomPainter {
+  final double op;
+  final bool busy;
+  const _FP(this.op, {this.busy = false});
+  @override
+  void paint(Canvas c, Size s) {
+    final color = busy
+        ? C.primaryMid.withOpacity(math.max(op, 0.85))
+        : C.primaryMid.withOpacity(op * 0.9 + 0.1);
+    final p = Paint()
+      ..color = color
+      ..strokeWidth =
+          4.0 // <-- made thicker
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    const pad = 24.0, l = 32.0; // slightly longer corners
+    for (final pts in [
+      [Offset(pad, pad + l), Offset(pad, pad), Offset(pad + l, pad)],
+      [
+        Offset(s.width - pad - l, pad),
+        Offset(s.width - pad, pad),
+        Offset(s.width - pad, pad + l),
+      ],
+    ]) {
+      c.drawPath(
+        Path()
+          ..moveTo(pts[0].dx, pts[0].dy)
+          ..lineTo(pts[1].dx, pts[1].dy)
+          ..lineTo(pts[2].dx, pts[2].dy),
+        p,
+      );
+    }
+    for (final pts in [
+      [
+        Offset(pad, s.height - pad - l),
+        Offset(pad, s.height - pad),
+        Offset(pad + l, s.height - pad),
+      ],
+      [
+        Offset(s.width - pad - l, s.height - pad),
+        Offset(s.width - pad, s.height - pad),
+        Offset(s.width - pad, s.height - pad - l),
+      ],
+    ]) {
+      c.drawPath(
+        Path()
+          ..moveTo(pts[0].dx, pts[0].dy)
+          ..lineTo(pts[1].dx, pts[1].dy)
+          ..lineTo(pts[2].dx, pts[2].dy),
+        p,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FP o) => o.op != op || o.busy != busy;
+}
+
 // ============================================================================
-// SHARED DESIGN COMPONENTS
+// UNIFIED DESIGN COMPONENTS
 // ============================================================================
+
+class _Card extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final BorderRadius? radius;
+  final Color? borderColor;
+  const _Card({
+    required this.child,
+    this.padding,
+    this.radius,
+    this.borderColor,
+  });
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: padding ?? const EdgeInsets.all(C.paddingCard),
+    decoration: BoxDecoration(
+      color: C.surface,
+      borderRadius: radius ?? BorderRadius.circular(C.radiusCard),
+      border: Border.all(color: borderColor ?? C.border),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x08000000),
+          blurRadius: 10,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: child,
+  );
+}
 
 class _TappableCard extends StatefulWidget {
   final Widget child;
@@ -1083,7 +1652,7 @@ class _TappableCard extends StatefulWidget {
   const _TappableCard({
     required this.child,
     required this.onTap,
-    this.margin = const EdgeInsets.only(bottom: 10),
+    this.margin = const EdgeInsets.only(bottom: 12),
   });
   @override
   State<_TappableCard> createState() => _TappableCardState();
@@ -1100,19 +1669,21 @@ class _TappableCardState extends State<_TappableCard> {
     },
     onTapCancel: () => setState(() => _pressed = false),
     child: AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 140),
       margin: widget.margin,
       decoration: BoxDecoration(
-        color: C.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _pressed ? C.primary : C.border, width: 1.0),
+        color: _pressed ? C.primaryTint : C.surface,
+        borderRadius: BorderRadius.circular(C.radiusCard),
+        border: Border.all(
+          color: _pressed ? C.primary.withOpacity(0.4) : C.border,
+        ),
         boxShadow: [
           BoxShadow(
             color: _pressed
-                ? C.primary.withOpacity(0.12)
-                : const Color(0x0A000000),
-            blurRadius: _pressed ? 10 : 6,
-            offset: const Offset(0, 2),
+                ? C.primary.withOpacity(0.1)
+                : const Color(0x08000000),
+            blurRadius: _pressed ? 12 : 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -1121,54 +1692,24 @@ class _TappableCardState extends State<_TappableCard> {
   );
 }
 
-class _Card extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-  final BorderRadius? radius;
-  const _Card({required this.child, this.padding, this.radius});
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: padding ?? const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: C.surface,
-      borderRadius: radius ?? BorderRadius.circular(16),
-      border: Border.all(color: C.border),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0A000000),
-          blurRadius: 8,
-          offset: Offset(0, 2),
-        ),
-      ],
-    ),
-    child: child,
-  );
-}
-
 class _SectionHeader extends StatelessWidget {
   final String title;
-  const _SectionHeader(this.title);
+  final Widget? trailing;
+  const _SectionHeader(this.title, {this.trailing});
   @override
   Widget build(BuildContext context) => Row(
     children: [
       Container(
         width: 3,
-        height: 16,
+        height: 15,
         decoration: BoxDecoration(
           color: C.primary,
           borderRadius: BorderRadius.circular(2),
         ),
       ),
       const SizedBox(width: 8),
-      Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: C.textPrimary,
-        ),
-      ),
+      Expanded(child: Text(title, style: T.heading)),
+      if (trailing != null) trailing!,
     ],
   );
 }
@@ -1176,96 +1717,85 @@ class _SectionHeader extends StatelessWidget {
 class _Pill extends StatelessWidget {
   final String label;
   final Color bg, fg;
-  const _Pill(this.label, {this.bg = C.primaryLight, this.fg = C.primary});
+  final IconData? icon;
+  const _Pill(
+    this.label, {
+    this.bg = C.primaryLight,
+    this.fg = C.primary,
+    this.icon,
+  });
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
       color: bg,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(C.radiusPill),
     ),
-    child: Text(
-      label,
-      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 11, color: fg),
+          const SizedBox(width: 4),
+        ],
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: fg,
+          ),
+        ),
+      ],
     ),
   );
 }
 
-class _ConfBar extends StatelessWidget {
-  final double value;
-  const _ConfBar(this.value);
-  @override
-  Widget build(BuildContext context) => Column(
+Widget _bullet(String text, Color color) => Padding(
+  padding: const EdgeInsets.only(bottom: 8),
+  child: Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Confidence Level',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: C.textSec,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: C.primaryLight,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  _accLabel(value),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: C.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Text(
-            '${(value * 100).toStringAsFixed(0)}%',
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              color: C.primary,
-              height: 1.0,
-            ),
-          ),
-        ],
+      Container(
+        margin: const EdgeInsets.only(top: 6),
+        width: 5,
+        height: 5,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
-      const SizedBox(height: 12),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: value),
-          duration: const Duration(milliseconds: 900),
-          curve: Curves.easeOutCubic,
-          builder: (_, v, __) => LinearProgressIndicator(
-            value: v,
-            minHeight: 8,
-            backgroundColor: C.border,
-            valueColor: const AlwaysStoppedAnimation(C.primary),
+      const SizedBox(width: 10),
+      Expanded(child: Text(text, style: T.body)),
+    ],
+  ),
+);
+
+Widget _warnItem(String text, Color color, Color bg) => Padding(
+  padding: const EdgeInsets.only(bottom: 8),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        margin: const EdgeInsets.only(top: 2),
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Icon(Icons.priority_high_rounded, size: 9, color: color),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: color.withOpacity(0.87),
+            height: 1.5,
           ),
         ),
       ),
     ],
-  );
-
-  static String _accLabel(double c) => c >= 0.80
-      ? 'High Accuracy'
-      : c >= 0.50
-      ? 'Medium Accuracy'
-      : 'Low Accuracy';
-}
+  ),
+);
 
 class _CharRow extends StatelessWidget {
   final IconData icon;
@@ -1273,7 +1803,7 @@ class _CharRow extends StatelessWidget {
   const _CharRow(this.icon, this.label, this.value);
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
+    padding: const EdgeInsets.symmetric(vertical: 10),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1284,17 +1814,14 @@ class _CharRow extends StatelessWidget {
             color: C.primaryTint,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 16, color: C.primary),
+          child: Icon(icon, size: 15, color: C.primary),
         ),
         const SizedBox(width: 12),
         SizedBox(
-          width: 90,
+          width: 96,
           child: Padding(
             padding: const EdgeInsets.only(top: 7),
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: C.textSec),
-            ),
+            child: Text(label, style: T.label),
           ),
         ),
         Expanded(
@@ -1302,11 +1829,7 @@ class _CharRow extends StatelessWidget {
             padding: const EdgeInsets.only(top: 7),
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: C.textPrimary,
-              ),
+              style: T.subhead,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1314,6 +1837,58 @@ class _CharRow extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+// ============================================================================
+// STAGGER ANIMATION
+// ============================================================================
+
+class _Stagger extends StatefulWidget {
+  final Widget child;
+  final int index;
+  final Duration delay;
+  const _Stagger({
+    required this.child,
+    required this.index,
+    this.delay = const Duration(milliseconds: 60),
+  });
+  @override
+  State<_Stagger> createState() => _StaggerState();
+}
+
+class _StaggerState extends State<_Stagger>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _fade;
+  late Animation<Offset> _slide;
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.07),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    Future.delayed(widget.delay * widget.index, () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _fade,
+    child: SlideTransition(position: _slide, child: widget.child),
   );
 }
 
@@ -1331,7 +1906,6 @@ class _ImageCarousel extends StatefulWidget {
 class _ImageCarouselState extends State<_ImageCarousel> {
   final PageController _pc = PageController();
   int _current = 0;
-
   @override
   void dispose() {
     _pc.dispose();
@@ -1342,7 +1916,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
   Widget build(BuildContext context) => Column(
     children: [
       ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(C.radiusCard),
         child: SizedBox(
           height: 220,
           width: double.infinity,
@@ -1367,31 +1941,141 @@ class _ImageCarouselState extends State<_ImageCarousel> {
           ),
         ),
       ),
-      const SizedBox(height: 10),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(widget.imagePaths.length, (i) {
-          final sel = _current == i;
-          return GestureDetector(
-            onTap: () => _pc.animateToPage(
-              i,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            ),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: sel ? 20 : 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: sel ? C.primary : C.borderMid,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          );
-        }),
-      ),
     ],
+  );
+}
+
+// ============================================================================
+// ANALYZING OVERLAY
+// ============================================================================
+
+class _AnalyzingOverlay extends StatefulWidget {
+  const _AnalyzingOverlay();
+  @override
+  State<_AnalyzingOverlay> createState() => _AnalyzingOverlayState();
+}
+
+class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
+    with TickerProviderStateMixin {
+  late AnimationController _spinCtrl, _pulseCtrl;
+  late Animation<double> _pulseAnim;
+  int _dotCount = 0;
+  Timer? _dotTimer;
+  @override
+  void initState() {
+    super.initState();
+    _spinCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(
+      begin: 0.75,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _dotTimer = Timer.periodic(const Duration(milliseconds: 480), (_) {
+      if (mounted) setState(() => _dotCount = (_dotCount + 1) % 4);
+    });
+  }
+
+  @override
+  void dispose() {
+    _spinCtrl.dispose();
+    _pulseCtrl.dispose();
+    _dotTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Positioned.fill(
+    child: Container(
+      color: C.camOverlayDark.withOpacity(0.88),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _pulseAnim,
+            builder: (_, child) =>
+                Transform.scale(scale: _pulseAnim.value, child: child),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: C.primaryMid.withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: AnimatedBuilder(
+                    animation: _spinCtrl,
+                    builder: (_, __) => Transform.rotate(
+                      angle: _spinCtrl.value * 2 * math.pi,
+                      child: CustomPaint(painter: _ArcPainter()),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: const AlwaysStoppedAnimation(C.primaryMid),
+                    backgroundColor: C.primaryMid.withOpacity(0.18),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Analyzing',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              SizedBox(
+                width: 28,
+                child: Text(
+                  '.' * _dotCount,
+                  style: const TextStyle(
+                    color: C.primaryMid,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Scanning the camote…',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.45),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    ),
   );
 }
 
@@ -1402,8 +2086,9 @@ class _ImageCarouselState extends State<_ImageCarousel> {
 PreferredSizeWidget _appBar(String title, {List<Widget>? actions}) => AppBar(
   backgroundColor: C.surface,
   surfaceTintColor: C.surface,
-  scrolledUnderElevation: 0,
+  scrolledUnderElevation: 0.5,
   elevation: 0,
+  shadowColor: C.border,
   title: Row(
     children: [
       Container(
@@ -1418,7 +2103,7 @@ PreferredSizeWidget _appBar(String title, {List<Widget>? actions}) => AppBar(
       Text(
         title,
         style: const TextStyle(
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w700,
           color: C.textPrimary,
         ),
@@ -1426,7 +2111,191 @@ PreferredSizeWidget _appBar(String title, {List<Widget>? actions}) => AppBar(
     ],
   ),
   actions: actions,
+  bottom: PreferredSize(
+    preferredSize: const Size.fromHeight(1),
+    child: Container(height: 1, color: C.border),
+  ),
 );
+
+// ============================================================================
+// APP ROOT
+// ============================================================================
+
+class DomaApp extends StatelessWidget {
+  const DomaApp({super.key});
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'Doma – Camote Classifier',
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      primarySwatch: Colors.green,
+      scaffoldBackgroundColor: C.bg,
+      fontFamily: 'Roboto',
+      appBarTheme: const AppBarTheme(
+        backgroundColor: C.surface,
+        foregroundColor: C.textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: C.surface,
+      ),
+    ),
+    home: const SplashScreen(),
+  );
+}
+
+// ============================================================================
+// SPLASH SCREEN
+// ============================================================================
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+  late Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _ctrl.forward();
+    Timer(const Duration(milliseconds: 1900), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 450),
+          pageBuilder: (_, __, ___) => const MainNavigation(),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: C.surface,
+    body: Container(
+      color: C.surface,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ScaleTransition(
+              scale: _scale,
+              child: FadeTransition(
+                opacity: _fade,
+                child: const Icon(Icons.eco, color: C.primary, size: 76),
+              ),
+            ),
+            const SizedBox(height: 12),
+            FadeTransition(
+              opacity: _fade,
+              child: const Text(
+                'Doma App',
+                style: TextStyle(
+                  color: C.primary,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            FadeTransition(
+              opacity: _fade,
+              child: Text(
+                'Camote Classifier App',
+                style: TextStyle(
+                  color: C.primary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 48),
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.4,
+                color: C.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class TimeFormatter {
+  static String rel(DateTime dt) {
+    final d = DateTime.now().difference(dt);
+    if (d.inSeconds < 60) return 'Just now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+    if (d.inHours < 24) return '${d.inHours}h ago';
+    if (d.inDays < 7) return '${d.inDays}d ago';
+    return '${dt.month}/${dt.day}/${dt.year}';
+  }
+
+  static String short(DateTime dt) {
+    const m = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final min = dt.minute.toString().padLeft(2, '0');
+    return '${m[dt.month - 1]} ${dt.day}  $h:$min ${dt.hour < 12 ? "AM" : "PM"}';
+  }
+
+  static String full(DateTime dt) {
+    const m = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final min = dt.minute.toString().padLeft(2, '0');
+    return '${m[dt.month - 1]} ${dt.day}, ${dt.year}  •  $h:$min ${dt.hour < 12 ? "AM" : "PM"}';
+  }
+}
 
 // ============================================================================
 // MAIN NAVIGATION
@@ -1443,8 +2312,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final _cls = CamoteClassifier();
   DetectionLog? _last;
   final _rKey = GlobalKey<_ResultsPageState>();
-  final _hKey = GlobalKey<_HistoryPageState>();
-
+  final _hKey = GlobalKey<_DetectionsPageState>();
   @override
   void initState() {
     super.initState();
@@ -1475,7 +2343,7 @@ class _MainNavigationState extends State<MainNavigation> {
       children: [
         ScanPage(classifier: _cls, onResult: _onResult, cameras: _cameras),
         ResultsPage(key: _rKey, result: _last),
-        HistoryPage(key: _hKey),
+        DetectionsPage(key: _hKey),
         const LibraryPage(),
       ],
     ),
@@ -1494,19 +2362,17 @@ class _BottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   const _BottomNav({required this.currentIndex, required this.onTap});
-
   static const _items = [
     (Icons.camera_alt_outlined, Icons.camera_alt, 'Scan'),
     (Icons.analytics_outlined, Icons.analytics, 'Results'),
-    (Icons.history_outlined, Icons.history, 'History'),
+    (Icons.history_outlined, Icons.history, 'Detections'),
     (Icons.photo_library_outlined, Icons.photo_library, 'Library'),
   ];
-
   @override
   Widget build(BuildContext context) => Container(
     decoration: const BoxDecoration(
       color: C.surface,
-      border: Border(top: BorderSide(color: C.border, width: 1)),
+      border: Border(top: BorderSide(color: C.border)),
     ),
     child: SafeArea(
       child: Padding(
@@ -1520,7 +2386,7 @@ class _BottomNav extends StatelessWidget {
               onTap: () => onTap(i),
               behavior: HitTestBehavior.opaque,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
+                duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
@@ -1528,7 +2394,7 @@ class _BottomNav extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: sel ? C.primaryLight : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(C.radiusPill),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1585,18 +2451,13 @@ class _ScanPageState extends State<ScanPage>
   bool _camReady = false;
   String? _camErr;
   bool _usingFront = false;
-  late AnimationController _scanCtrl, _cornerCtrl;
-  late Animation<double> _scanAnim, _cornerAnim;
+  late AnimationController _cornerCtrl;
+  late Animation<double> _cornerAnim;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _scanCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat(reverse: true);
-    _scanAnim = CurvedAnimation(parent: _scanCtrl, curve: Curves.easeInOut);
     _cornerCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -1612,7 +2473,6 @@ class _ScanPageState extends State<ScanPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _cam?.dispose();
-    _scanCtrl.dispose();
     _cornerCtrl.dispose();
     super.dispose();
   }
@@ -1623,9 +2483,8 @@ class _ScanPageState extends State<ScanPage>
     if (s == AppLifecycleState.inactive) {
       _cam!.dispose();
       if (mounted) setState(() => _camReady = false);
-    } else if (s == AppLifecycleState.resumed) {
+    } else if (s == AppLifecycleState.resumed)
       _initCam();
-    }
   }
 
   Future<void> _initCam() async {
@@ -1668,11 +2527,7 @@ class _ScanPageState extends State<ScanPage>
         await c.setExposureMode(ExposureMode.auto);
         await c.setFlashMode(FlashMode.off);
       } catch (_) {}
-      if (mounted)
-        setState(() {
-          _camReady = true;
-          _camErr = null;
-        });
+      if (mounted) setState(() => _camReady = true);
     } catch (e) {
       debugPrint('[Doma] camera error: $e');
       if (mounted) setState(() => _camErr = 'Camera unavailable.');
@@ -1709,18 +2564,12 @@ class _ScanPageState extends State<ScanPage>
 
   Future<void> _process(File file) async {
     if (!mounted) return;
-    setState(() {
-      _busy = true;
-      _previewFile = file;
-    });
+    setState(() => _busy = true);
     await Future.delayed(const Duration(milliseconds: 80));
     try {
       final result = await widget.classifier.detect(file);
       if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _previewFile = null;
-      });
+      setState(() => _busy = false);
       switch (result.state) {
         case _ScanState.notFound:
           if (mounted) _showDlg(const _NoCamoteDlg());
@@ -1746,15 +2595,11 @@ class _ScanPageState extends State<ScanPage>
         results: [winner],
         timestamp: DateTime.now(),
       );
-      await DetectionLogger.save(log);
       widget.onResult(log);
     } catch (e, st) {
       debugPrint('[Doma] process error: $e\n$st');
       if (mounted) {
-        setState(() {
-          _busy = false;
-          _previewFile = null;
-        });
+        setState(() => _busy = false);
         _showDlg(const _NoCamoteDlg());
       }
     }
@@ -1800,7 +2645,7 @@ class _ScanPageState extends State<ScanPage>
         ),
       );
     final preview = _cam!.value.previewSize;
-    if (preview == null) {
+    if (preview == null)
       return Container(
         color: const Color(0xFF0D1F17),
         child: const Center(
@@ -1810,7 +2655,6 @@ class _ScanPageState extends State<ScanPage>
           ),
         ),
       );
-    }
     return OverflowBox(
       alignment: Alignment.center,
       child: FittedBox(
@@ -1830,7 +2674,7 @@ class _ScanPageState extends State<ScanPage>
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: _appBar(
-        'Scan Camote',
+        'Scan',
         actions: [
           IconButton(
             icon: const Icon(Icons.menu_book_outlined),
@@ -1839,7 +2683,7 @@ class _ScanPageState extends State<ScanPage>
             onPressed: () => _showDlg(const _HowToDlg()),
           ),
           IconButton(
-            icon: const Icon(Icons.help_outline),
+            icon: const Icon(Icons.info_outline),
             color: C.textSec,
             tooltip: 'About',
             onPressed: () => _showDlg(const _AboutDlg()),
@@ -1848,71 +2692,26 @@ class _ScanPageState extends State<ScanPage>
       ),
       body: Column(
         children: [
-          // ── Camera viewport ────────────────────────────────────────────
           Expanded(
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // ── Camera feed ─────────────────────────────────────────
                 if (_previewFile != null && !_busy)
                   Image.file(_previewFile!, fit: BoxFit.cover)
-                else if (!_busy)
-                  _camView()
                 else
-                  // When busy: show the captured image dimly underneath
-                  Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (_previewFile != null)
-                        Image.file(_previewFile!, fit: BoxFit.cover)
-                      else
-                        _camView(),
-                    ],
-                  ),
-
-                // ── Scan line (only when camera is live, not busy) ──────
-                if (!_busy)
-                  AnimatedBuilder(
-                    animation: _scanAnim,
-                    builder: (_, __) => Positioned(
-                      top: 24 + (_scanAnim.value * (screenH * 0.6)),
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        height: 2,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.transparent,
-                              C.primaryMid.withOpacity(0.7),
-                              C.primaryMid.withOpacity(0.7),
-                              Colors.transparent,
-                            ],
-                            stops: const [0.0, 0.2, 0.8, 1.0],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // ── Corner brackets (only when not busy) ────────────────
+                  _camView(),
+                // ── Removed horizontal scanning line ──
                 if (!_busy)
                   AnimatedBuilder(
                     animation: _cornerAnim,
                     builder: (_, __) => Positioned.fill(
-                      child: CustomPaint(
-                        painter: _FP(_cornerAnim.value, busy: false),
-                      ),
+                      child: CustomPaint(painter: _FP(_cornerAnim.value)),
                     ),
                   ),
-
-                // ── Analyzing overlay (replaces old scanning badge) ─────
                 if (_busy) const _AnalyzingOverlay(),
               ],
             ),
           ),
-
-          // ── Bottom action bar ──────────────────────────────────────────
           Container(
             color: C.bg,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
@@ -1920,19 +2719,16 @@ class _ScanPageState extends State<ScanPage>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Gallery — left
                 _ActionBtn(
                   icon: Icons.photo_library_outlined,
                   label: 'Gallery',
                   onTap: _busy ? null : _gallery,
                   busy: _busy,
                 ),
-
-                // Shutter — circle-in-circle style in primary green
                 GestureDetector(
                   onTap: _busy ? null : _capture,
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
+                    duration: const Duration(milliseconds: 140),
                     width: 78,
                     height: 78,
                     decoration: BoxDecoration(
@@ -1944,7 +2740,7 @@ class _ScanPageState extends State<ScanPage>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: C.primary.withOpacity(_busy ? 0.08 : 0.25),
+                          color: C.primary.withOpacity(_busy ? 0.06 : 0.22),
                           blurRadius: 14,
                           offset: const Offset(0, 4),
                         ),
@@ -1972,8 +2768,6 @@ class _ScanPageState extends State<ScanPage>
                     ),
                   ),
                 ),
-
-                // Camera switch — right
                 _ActionBtn(
                   icon: Icons.flip_camera_ios_outlined,
                   label: 'Flip',
@@ -1989,7 +2783,6 @@ class _ScanPageState extends State<ScanPage>
   }
 }
 
-// ── Small action button used in the bottom bar ───────────────────────────────
 class _ActionBtn extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -2001,7 +2794,6 @@ class _ActionBtn extends StatelessWidget {
     required this.onTap,
     required this.busy,
   });
-
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
@@ -2021,10 +2813,10 @@ class _ActionBtn extends StatelessWidget {
             boxShadow: busy
                 ? []
                 : [
-                    BoxShadow(
-                      color: const Color(0x0F000000),
+                    const BoxShadow(
+                      color: Color(0x0F000000),
                       blurRadius: 6,
-                      offset: const Offset(0, 2),
+                      offset: Offset(0, 2),
                     ),
                   ],
           ),
@@ -2044,77 +2836,8 @@ class _ActionBtn extends StatelessWidget {
   );
 }
 
-// ── Scan frame painter ────────────────────────────────────────────────────────
-
-class _FP extends CustomPainter {
-  final double op;
-  final bool busy;
-  const _FP(this.op, {this.busy = false});
-
-  @override
-  void paint(Canvas c, Size s) {
-    final color = busy
-        ? C.primaryMid.withOpacity(math.max(op, 0.85))
-        : C.primaryMid.withOpacity(op * 0.9 + 0.1);
-
-    final p = Paint()
-      ..color = color
-      ..strokeWidth = busy ? 3.0 : 2.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    const pad = 24.0;
-    const l = 28.0;
-
-    final topCorners = [
-      [Offset(pad, pad + l), Offset(pad, pad), Offset(pad + l, pad)],
-      [
-        Offset(s.width - pad - l, pad),
-        Offset(s.width - pad, pad),
-        Offset(s.width - pad, pad + l),
-      ],
-    ];
-
-    for (final pts in topCorners) {
-      c.drawPath(
-        Path()
-          ..moveTo(pts[0].dx, pts[0].dy)
-          ..lineTo(pts[1].dx, pts[1].dy)
-          ..lineTo(pts[2].dx, pts[2].dy),
-        p,
-      );
-    }
-
-    final bottomCorners = [
-      [
-        Offset(pad, s.height - pad - l),
-        Offset(pad, s.height - pad),
-        Offset(pad + l, s.height - pad),
-      ],
-      [
-        Offset(s.width - pad - l, s.height - pad),
-        Offset(s.width - pad, s.height - pad),
-        Offset(s.width - pad, s.height - pad - l),
-      ],
-    ];
-
-    for (final pts in bottomCorners) {
-      c.drawPath(
-        Path()
-          ..moveTo(pts[0].dx, pts[0].dy)
-          ..lineTo(pts[1].dx, pts[1].dy)
-          ..lineTo(pts[2].dx, pts[2].dy),
-        p,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_FP o) => o.op != op || o.busy != busy;
-}
-
 // ============================================================================
-// DIALOG WIDGETS
+// SHARED DIALOG SHELL
 // ============================================================================
 
 class _WhiteDlg extends StatelessWidget {
@@ -2128,6 +2851,32 @@ class _WhiteDlg extends StatelessWidget {
     child: child,
   );
 }
+
+Widget _dlgBtn(
+  String label, {
+  required VoidCallback onTap,
+  Color bg = C.primary,
+}) => SizedBox(
+  width: double.infinity,
+  child: ElevatedButton(
+    onPressed: onTap,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: bg,
+      foregroundColor: C.white,
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(C.radiusInner),
+      ),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+    ),
+  ),
+);
+
+// ── Dialog widgets ────────────────────────────────────────────────────────────
 
 class _NoCamoteDlg extends StatelessWidget {
   const _NoCamoteDlg();
@@ -2147,26 +2896,15 @@ class _NoCamoteDlg extends StatelessWidget {
             child: const Icon(Icons.search_off_rounded, color: C.err, size: 28),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'No Camote Detected',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: C.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Make sure the camote is clearly visible, well-lit, and centred in the frame!',
+          Text('No Camote Detected', style: T.title),
+          const SizedBox(height: 8),
+          Text(
+            'Make sure it is well-lit and centred in frame.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: C.textSec, height: 1.55),
+            style: T.body,
           ),
-          const SizedBox(height: 24),
-          _dlgBtnIcon(
-            'Try Again',
-            icon: Icons.replay_rounded,
-            onTap: () => Navigator.pop(context),
-          ),
+          const SizedBox(height: 22),
+          _dlgBtn('Try Again', onTap: () => Navigator.pop(context)),
         ],
       ),
     ),
@@ -2195,27 +2933,19 @@ class _MultipleVariantsDlg extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Multiple Varieties Detected',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: C.textPrimary,
-            ),
+            style: T.title,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 10),
-          const Text(
-            'More than one camote variety was detected in this image. The scan has been rejected to ensure accuracy.',
+          const SizedBox(height: 8),
+          Text(
+            'Place only one camote in frame for an accurate scan.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: C.textSec, height: 1.55),
+            style: T.body,
           ),
-          const SizedBox(height: 24),
-          _dlgBtnIcon(
-            'Try Again',
-            icon: Icons.replay_rounded,
-            onTap: () => Navigator.pop(context),
-          ),
+          const SizedBox(height: 22),
+          _dlgBtn('Try Again', onTap: () => Navigator.pop(context)),
         ],
       ),
     ),
@@ -2228,7 +2958,7 @@ class _HowToDlg extends StatelessWidget {
   Widget build(BuildContext context) => _WhiteDlg(
     child: ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.78,
+        maxHeight: MediaQuery.of(context).size.height * 0.72,
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -2250,14 +2980,7 @@ class _HowToDlg extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'How to Use',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: C.textPrimary,
-                  ),
-                ),
+                Text('How to Use', style: T.title),
                 const Spacer(),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -2280,41 +3003,36 @@ class _HowToDlg extends StatelessWidget {
                   children: [
                     _step(
                       1,
-                      'Place ONE Camote',
-                      'Put a single camote on a plain surface and centre it in the frame.',
+                      'Place one camote',
+                      'Centre it on a plain surface.',
                     ),
                     _step(
                       2,
-                      'Capture',
-                      'Tap the shutter or pick an image from your gallery.',
+                      'Capture or choose',
+                      'Use the shutter or gallery.',
                     ),
                     _step(
                       3,
-                      'Analyze',
-                      'The AI model identifies the variety automatically.',
+                      'AI analysis',
+                      'The variety is identified automatically.',
                     ),
                     _step(
                       4,
-                      'View Results',
-                      'See the variety name, confidence, shape, colours, and texture.',
+                      'View results',
+                      'See variety, nutrition, and recipes.',
                     ),
-                    _step(
-                      5,
-                      'History & Library',
-                      'Review past scans or browse all four varieties.',
-                    ),
+                    _step(5, 'History & Library', 'Review past scans anytime.'),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            _dlgBtn('Got It!', onTap: () => Navigator.pop(context)),
+            _dlgBtn('Got It', onTap: () => Navigator.pop(context)),
           ],
         ),
       ),
     ),
   );
-
   Widget _step(int n, String t, String d) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
     child: Row(
@@ -2343,23 +3061,9 @@ class _HowToDlg extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                t,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: C.textPrimary,
-                ),
-              ),
+              Text(t, style: T.subhead),
               const SizedBox(height: 2),
-              Text(
-                d,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: C.textSec,
-                  height: 1.45,
-                ),
-              ),
+              Text(d, style: T.body),
             ],
           ),
         ),
@@ -2386,20 +3090,13 @@ class _AboutDlg extends StatelessWidget {
             child: const Icon(Icons.eco, color: C.primary, size: 32),
           ),
           const SizedBox(height: 14),
-          const Text(
-            'Doma',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: C.textPrimary,
-            ),
-          ),
+          Text('Doma', style: T.display),
           Container(
             margin: const EdgeInsets.symmetric(vertical: 6),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
               color: C.primaryLight,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(C.radiusPill),
             ),
             child: const Text(
               'Version 1.0',
@@ -2411,66 +3108,18 @@ class _AboutDlg extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'A computer-vision app for identifying and classifying sweet potato (camote) varieties commonly found in Tacloban City, Leyte.',
+          Text(
+            'Identifies camote varieties grown in Tacloban City, Leyte.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: C.textSec, height: 1.55),
+            style: T.body,
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
           _dlgBtn('Close', onTap: () => Navigator.pop(context)),
         ],
       ),
     ),
   );
 }
-
-Widget _dlgBtn(String label, {required VoidCallback onTap}) => SizedBox(
-  width: double.infinity,
-  child: ElevatedButton(
-    onPressed: onTap,
-    style: ElevatedButton.styleFrom(
-      backgroundColor: C.primary,
-      foregroundColor: C.white,
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ),
-    child: Text(
-      label,
-      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-    ),
-  ),
-);
-
-Widget _dlgBtnIcon(
-  String label, {
-  required IconData icon,
-  required VoidCallback onTap,
-}) => SizedBox(
-  width: double.infinity,
-  child: ElevatedButton(
-    onPressed: onTap,
-    style: ElevatedButton.styleFrom(
-      backgroundColor: C.primary,
-      foregroundColor: C.white,
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(width: 8),
-        Icon(icon, size: 18, color: C.white),
-      ],
-    ),
-  ),
-);
 
 // ============================================================================
 // RESULTS PAGE
@@ -2486,6 +3135,8 @@ class ResultsPage extends StatefulWidget {
 class _ResultsPageState extends State<ResultsPage>
     with SingleTickerProviderStateMixin {
   DetectionLog? _r;
+  bool _saved = false;
+  double? _imageWidth, _imageHeight;
   late AnimationController _ctrl;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
@@ -2496,14 +3147,17 @@ class _ResultsPageState extends State<ResultsPage>
     _r = widget.result;
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 480),
     );
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.05),
+      begin: const Offset(0, 0.04),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
-    if (_r != null) _ctrl.forward();
+    if (_r != null) {
+      _ctrl.forward();
+      _loadImageDimensions();
+    }
   }
 
   @override
@@ -2516,14 +3170,53 @@ class _ResultsPageState extends State<ResultsPage>
   void didUpdateWidget(ResultsPage old) {
     super.didUpdateWidget(old);
     if (widget.result != old.result) {
-      setState(() => _r = widget.result);
+      setState(() {
+        _r = widget.result;
+        _saved = false;
+        _imageWidth = _imageHeight = null;
+      });
       _ctrl.forward(from: 0);
+      if (_r != null) _loadImageDimensions();
     }
   }
 
   void update(DetectionLog log) {
-    setState(() => _r = log);
+    setState(() {
+      _r = log;
+      _saved = false;
+      _imageWidth = _imageHeight = null;
+    });
     _ctrl.forward(from: 0);
+    _loadImageDimensions();
+  }
+
+  Future<void> _loadImageDimensions() async {
+    if (_r == null) return;
+    final file = File(_r!.imagePath);
+    if (!await file.exists()) return;
+    try {
+      final bytes = await file.readAsBytes();
+      final img.Image? decoded = img.decodeImage(bytes);
+      if (decoded != null) {
+        setState(() {
+          _imageWidth = decoded.width.toDouble();
+          _imageHeight = decoded.height.toDouble();
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveDetection() async {
+    if (_r == null || _saved) return;
+    await DetectionLogger.save(_r!);
+    setState(() => _saved = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Detection saved'),
+        backgroundColor: C.primary,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   CamoteVariety? _v(String cls) {
@@ -2541,7 +3234,7 @@ class _ResultsPageState extends State<ResultsPage>
     if (_r == null || _r!.results.isEmpty)
       return Scaffold(
         backgroundColor: C.bg,
-        appBar: _appBar('Analysis Results'),
+        appBar: _appBar('Results'),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -2555,24 +3248,14 @@ class _ResultsPageState extends State<ResultsPage>
                 ),
                 child: const Icon(
                   Icons.analytics_outlined,
-                  size: 48,
+                  size: 44,
                   color: C.textMuted,
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'No results yet',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: C.textPrimary,
-                ),
-              ),
+              Text('No results yet', style: T.heading),
               const SizedBox(height: 6),
-              const Text(
-                'Scan a camote to see results here',
-                style: TextStyle(fontSize: 13, color: C.textSec),
-              ),
+              Text('Scan a camote to see results here', style: T.body),
             ],
           ),
         ),
@@ -2580,10 +3263,12 @@ class _ResultsPageState extends State<ResultsPage>
 
     final top = _r!.results.first;
     final variety = _v(top.className);
+    final accentColor = _accent(top.className);
+    final accentLightColor = _accentLight(top.className);
 
     return Scaffold(
       backgroundColor: C.bg,
-      appBar: _appBar('Analysis Results'),
+      appBar: _appBar('Results'),
       body: FadeTransition(
         opacity: _fade,
         child: SlideTransition(
@@ -2592,14 +3277,42 @@ class _ResultsPageState extends State<ResultsPage>
             child: Column(
               children: [
                 SizedBox(
-                  height: 300,
+                  height: 260,
                   width: double.infinity,
                   child: File(_r!.imagePath).existsSync()
                       ? Stack(
                           fit: StackFit.expand,
                           children: [
-                            Image.file(File(_r!.imagePath), fit: BoxFit.cover),
-                            CustomPaint(painter: _BBPainter(det: top)),
+                            Image.file(
+                              File(_r!.imagePath),
+                              fit: BoxFit.contain,
+                              alignment: Alignment.center,
+                            ),
+                            CustomPaint(
+                              painter: _BBPainter(
+                                det: top,
+                                imageWidth: _imageWidth,
+                                imageHeight: _imageHeight,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      C.bg.withOpacity(0.97),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         )
                       : Container(
@@ -2612,126 +3325,143 @@ class _ResultsPageState extends State<ResultsPage>
                         ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(
+                    C.paddingPage,
+                    0,
+                    C.paddingPage,
+                    28,
+                  ),
                   child: Column(
                     children: [
-                      _Card(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _SectionHeader('Camote Variant'),
-                            const SizedBox(height: 14),
-                            const Divider(height: 1, color: C.border),
-                            const SizedBox(height: 14),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                      _Stagger(
+                        index: 0,
+                        child: _IdentityCard(
+                          top: top,
+                          variety: variety,
+                          accentColor: accentColor,
+                          accentLightColor: accentLightColor,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (variety != null) ...[
+                        _Stagger(
+                          index: 1,
+                          child: _Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  width: 52,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    color: _varietyAccent(top.className),
-                                    shape: BoxShape.circle,
-                                  ),
+                                const _SectionHeader('Overview'),
+                                const SizedBox(height: 10),
+                                Text(variety.description, style: T.body),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _Stagger(
+                          index: 2,
+                          child: _Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const _SectionHeader('Characteristics'),
+                                const SizedBox(height: 4),
+                                const Divider(height: 1, color: C.border),
+                                _CharRow(
+                                  Icons.straighten,
+                                  'Shape',
+                                  variety.shape,
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        variety?.name ?? top.className.cap,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w800,
-                                          color: C.textPrimary,
-                                        ),
-                                      ),
-                                      if (variety != null) ...[
-                                        Text(
-                                          variety.commonName,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: C.primary,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        Text(
-                                          variety.scientificName,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: C.textSec,
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
+                                const Divider(height: 1, color: C.border),
+                                _CharRow(
+                                  Icons.palette_outlined,
+                                  'Skin Color',
+                                  variety.skinColor,
+                                ),
+                                const Divider(height: 1, color: C.border),
+                                _CharRow(
+                                  Icons.circle_outlined,
+                                  'Flesh Color',
+                                  variety.fleshColor,
+                                ),
+                                const Divider(height: 1, color: C.border),
+                                _CharRow(
+                                  Icons.texture,
+                                  'Texture',
+                                  variety.texture,
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 18),
-                            const Divider(height: 1, color: C.border),
-                            const SizedBox(height: 16),
-                            _ConfBar(top.confidence),
-                          ],
-                        ),
-                      ),
-                      if (variety != null) ...[
-                        const SizedBox(height: 12),
-                        _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const _SectionHeader('Overview'),
-                              const SizedBox(height: 10),
-                              Text(
-                                variety.description,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: C.textSec,
-                                  height: 1.6,
-                                ),
-                              ),
-                            ],
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const _SectionHeader('Characteristics'),
-                              const SizedBox(height: 12),
-                              const Divider(height: 1, color: C.border),
-                              _CharRow(
-                                Icons.straighten,
-                                'Shape',
-                                variety.shape,
-                              ),
-                              const Divider(height: 1, color: C.border),
-                              _CharRow(
-                                Icons.palette_outlined,
-                                'Skin Color',
-                                variety.skinColor,
-                              ),
-                              const Divider(height: 1, color: C.border),
-                              _CharRow(
-                                Icons.circle_outlined,
-                                'Flesh Color',
-                                variety.fleshColor,
-                              ),
-                              const Divider(height: 1, color: C.border),
-                              _CharRow(
-                                Icons.texture,
-                                'Surface Texture',
-                                variety.texture,
-                              ),
-                            ],
+                        const SizedBox(height: 10),
+                        _Stagger(
+                          index: 3,
+                          child: _IntakeCard(
+                            intake: variety.intake,
+                            accentColor: accentColor,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _Stagger(
+                          index: 4,
+                          child: _TargetedCard(
+                            people: variety.targetedPeople,
+                            accentColor: accentColor,
+                            accentLightColor: accentLightColor,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _Stagger(
+                          index: 5,
+                          child: _MedicalCard(
+                            medical: variety.medicalInfo,
+                            accentColor: accentColor,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _Stagger(
+                          index: 6,
+                          child: _RecipeRowCard(
+                            recipes: variety.recipes,
+                            accentColor: accentColor,
                           ),
                         ),
                       ],
+                      _Stagger(
+                        index: 7,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 18),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _saved ? null : _saveDetection,
+                              icon: Icon(
+                                _saved ? Icons.check_circle : Icons.add,
+                              ),
+                              label: Text(_saved ? 'Saved' : 'Save Detection'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _saved
+                                    ? C.primaryLight
+                                    : C.primary,
+                                foregroundColor: _saved ? C.primary : C.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    C.radiusInner,
+                                  ),
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -2744,20 +3474,885 @@ class _ResultsPageState extends State<ResultsPage>
   }
 }
 
-// ============================================================================
-// HISTORY PAGE
-// ============================================================================
-
-class HistoryPage extends StatefulWidget {
-  const HistoryPage({super.key});
+// ── Identity card (no confidence bar) ────────────────────────────────────────
+class _IdentityCard extends StatelessWidget {
+  final DetectionResult top;
+  final CamoteVariety? variety;
+  final Color accentColor, accentLightColor;
+  const _IdentityCard({
+    required this.top,
+    required this.variety,
+    required this.accentColor,
+    required this.accentLightColor,
+  });
   @override
-  State<HistoryPage> createState() => _HistoryPageState();
+  Widget build(BuildContext context) => _Card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: accentColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: accentColor.withOpacity(0.28),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: const SizedBox.shrink(),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(variety?.name ?? top.className.cap, style: T.display),
+                  if (variety != null)
+                    Text(
+                      variety!.commonName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: accentColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: accentLightColor,
+                borderRadius: BorderRadius.circular(C.radiusPill),
+              ),
+              child: Text(
+                'Detected',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: accentColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
 }
 
-class _HistoryPageState extends State<HistoryPage> {
+// ── Intake card ───────────────────────────────────────────────────────────────
+class _IntakeCard extends StatelessWidget {
+  final IntakeGuideline intake;
+  final Color accentColor;
+  const _IntakeCard({required this.intake, required this.accentColor});
+  @override
+  Widget build(BuildContext context) => _Card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          'Daily Intake',
+          trailing: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: C.primaryLight,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.monitor_heart_outlined,
+              size: 14,
+              color: C.primary,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _intakeStat(
+                'Daily Max',
+                intake.dailyMax,
+                Icons.today,
+                accentColor,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _intakeStat(
+                'Weekly Max',
+                intake.weeklyMax,
+                Icons.date_range,
+                accentColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _intakeStat(
+                'Serving',
+                intake.servingSize,
+                Icons.restaurant,
+                accentColor,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _intakeStat(
+                'Best Time',
+                intake.bestTime,
+                Icons.wb_sunny_outlined,
+                accentColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        const Divider(height: 1, color: C.border),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: C.warnLight,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: const Icon(
+                Icons.warning_amber_outlined,
+                size: 13,
+                color: C.warn,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text('Cautions', style: T.subhead),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...intake.limitations.map((l) => _warnItem(l, C.warn, C.warnLight)),
+        ...intake.cautions.map((c) => _warnItem(c, C.warn, C.warnLight)),
+      ],
+    ),
+  );
+
+  Widget _intakeStat(String label, String value, IconData icon, Color color) =>
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: C.bg,
+          borderRadius: BorderRadius.circular(C.radiusInner),
+          border: Border.all(color: C.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(height: 5),
+            Text(label, style: T.caption),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: C.textPrimary,
+                height: 1.35,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      );
+}
+
+// ── Targeted people card – no bubbles, clean list ──────────────────────────
+class _TargetedCard extends StatelessWidget {
+  final List<String> people;
+  final Color accentColor, accentLightColor;
+  const _TargetedCard({
+    required this.people,
+    required this.accentColor,
+    required this.accentLightColor,
+  });
+  @override
+  Widget build(BuildContext context) => _Card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader('Best Suited For'),
+        const SizedBox(height: 12),
+        ...people.map(
+          (p) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Icon(Icons.person_outline, size: 16, color: accentColor),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    p,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: accentColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ── Medical card ──────────────────────────────────────────────────────────────
+class _MedicalCard extends StatelessWidget {
+  final MedicalInfo medical;
+  final Color accentColor;
+  const _MedicalCard({required this.medical, required this.accentColor});
+  @override
+  Widget build(BuildContext context) => _Card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          'Nutrition & Medical',
+          trailing: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: C.primaryLight,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: const Icon(
+              Icons.medical_information_outlined,
+              size: 13,
+              color: C.primary,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _nutBadge(
+              'Calories',
+              medical.calories100g,
+              Icons.local_fire_department_outlined,
+            ),
+            _nutBadge('Carbs', medical.carbs100g, Icons.grain),
+            _nutBadge('Fiber', medical.fiber, Icons.spa_outlined),
+            _nutBadge('Potassium', medical.potassium, Icons.bolt_outlined),
+            _nutBadge('Vitamin A', medical.vitaminA, Icons.visibility_outlined),
+            _nutBadge('Vitamin C', medical.vitaminC, Icons.eco_outlined),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _infoRow('Glycemic Index', medical.glycemicIndex),
+        _infoRow('Glycemic Load', medical.glycemicLoad),
+        const SizedBox(height: 10),
+        const Divider(height: 1, color: C.border),
+        const SizedBox(height: 10),
+        Text('Medicinal Uses', style: T.subhead.copyWith(color: C.primary)),
+        const SizedBox(height: 6),
+        ...medical.medicinalUses.map((u) => _bullet(u, C.primary)),
+        if (medical.drugInteractions.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text('Drug Interactions', style: T.subhead.copyWith(color: C.warn)),
+          const SizedBox(height: 6),
+          ...medical.drugInteractions.map(
+            (u) => _warnItem(u, C.warn, C.warnLight),
+          ),
+        ],
+        if (medical.contraindications.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text('Contraindications', style: T.subhead.copyWith(color: C.err)),
+          const SizedBox(height: 6),
+          ...medical.contraindications.map(
+            (u) => _warnItem(u, C.err, C.errLight),
+          ),
+        ],
+      ],
+    ),
+  );
+
+  Widget _nutBadge(String label, String value, IconData icon) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: C.primary.withOpacity(0.06),
+      borderRadius: BorderRadius.circular(C.radiusInner),
+      border: Border.all(color: C.primary.withOpacity(0.16)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: C.primary),
+        const SizedBox(width: 5),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(fontSize: 9, color: C.primary.withOpacity(0.7)),
+            ),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: C.primary,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  Widget _infoRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Row(
+      children: [
+        Text('$label:', style: T.label),
+        const SizedBox(width: 6),
+        Text(value, style: T.subhead),
+      ],
+    ),
+  );
+}
+
+// ── Recipe row card ───────────────────────────────────────────────────────────
+class _RecipeRowCard extends StatelessWidget {
+  final List<CamoteRecipe> recipes;
+  final Color accentColor;
+  const _RecipeRowCard({required this.recipes, required this.accentColor});
+  @override
+  Widget build(BuildContext context) => _Card(
+    padding: EdgeInsets.zero,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            C.paddingCard,
+            C.paddingCard,
+            C.paddingCard,
+            12,
+          ),
+          child: _SectionHeader(
+            'Recipes',
+            trailing: Text('${recipes.length}', style: T.caption),
+          ),
+        ),
+        SizedBox(
+          height: 170,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(
+              C.paddingCard,
+              0,
+              C.paddingCard,
+              C.paddingCard,
+            ),
+            itemCount: recipes.length,
+            itemBuilder: (ctx, i) => GestureDetector(
+              onTap: () => showModalBottomSheet(
+                context: ctx,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => _RecipeDetailSheet(
+                  recipe: recipes[i],
+                  accentColor: accentColor,
+                ),
+              ),
+              child: Container(
+                width: 160,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(C.radiusInner),
+                  border: Border.all(color: C.border),
+                  color: C.bg,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(9),
+                      ),
+                      child: SizedBox(
+                        height: 85,
+                        width: 160,
+                        child: Image.asset(
+                          recipes[i].imagePath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: accentColor.withOpacity(0.1),
+                            child: Icon(
+                              Icons.restaurant_menu,
+                              color: accentColor,
+                              size: 32,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            recipes[i].name,
+                            style: T.subhead,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.timer_outlined,
+                                size: 10,
+                                color: accentColor,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                recipes[i].cookTime,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: accentColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: accentColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  recipes[i].difficulty,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: accentColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ============================================================================
+// RECIPE DETAIL BOTTOM SHEET (unchanged)
+// ============================================================================
+
+class _RecipeDetailSheet extends StatefulWidget {
+  final CamoteRecipe recipe;
+  final Color accentColor;
+  const _RecipeDetailSheet({required this.recipe, required this.accentColor});
+  @override
+  State<_RecipeDetailSheet> createState() => _RecipeDetailSheetState();
+}
+
+class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
+    with SingleTickerProviderStateMixin {
+  late TabController _tab;
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.recipe;
+    final accent = widget.accentColor;
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (_, sc) => Container(
+        decoration: const BoxDecoration(
+          color: C.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              decoration: BoxDecoration(
+                color: C.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            SizedBox(
+              height: 190,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    r.imagePath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: accent.withOpacity(0.15),
+                      child: Icon(
+                        Icons.restaurant_menu,
+                        color: accent,
+                        size: 56,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.65),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          r.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          children: [
+                            _badge(
+                              r.prepTime,
+                              Icons.access_time,
+                              Colors.white70,
+                            ),
+                            const SizedBox(width: 8),
+                            _badge(
+                              r.cookTime,
+                              Icons.local_fire_department,
+                              Colors.white70,
+                            ),
+                            const SizedBox(width: 8),
+                            _badge(
+                              r.difficulty,
+                              Icons.bar_chart,
+                              Colors.white70,
+                            ),
+                            const SizedBox(width: 8),
+                            _badge(
+                              '${r.servings} servings',
+                              Icons.people_outline,
+                              Colors.white70,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.black45,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              color: C.surface,
+              child: TabBar(
+                controller: _tab,
+                labelColor: accent,
+                unselectedLabelColor: C.textSec,
+                indicatorColor: accent,
+                labelStyle: T.subhead,
+                tabs: const [
+                  Tab(text: 'Ingredients'),
+                  Tab(text: 'Steps'),
+                  Tab(text: 'Tips'),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tab,
+                children: [
+                  ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      _Pill(
+                        '${r.calories} kcal / serving',
+                        bg: accent.withOpacity(0.1),
+                        fg: accent,
+                      ),
+                      const SizedBox(height: 14),
+                      ...r.ingredients.asMap().entries.map(
+                        (e) => _Stagger(
+                          index: e.key,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: accent.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${e.key + 1}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: accent,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text(e.value, style: T.body)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: r.steps
+                        .asMap()
+                        .entries
+                        .map(
+                          (e) => _Stagger(
+                            index: e.key,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Column(
+                                    children: [
+                                      Container(
+                                        width: 30,
+                                        height: 30,
+                                        decoration: BoxDecoration(
+                                          color: accent,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '${e.key + 1}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (e.key < r.steps.length - 1)
+                                        Container(
+                                          width: 2,
+                                          height: 28,
+                                          color: accent.withOpacity(0.2),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 6),
+                                      child: Text(e.value, style: T.body),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      ...r.tips.asMap().entries.map(
+                        (e) => _Stagger(
+                          index: e.key,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: accent.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(
+                                C.radiusInner,
+                              ),
+                              border: Border.all(
+                                color: accent.withOpacity(0.18),
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.lightbulb_outline,
+                                  color: accent,
+                                  size: 17,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    e.value,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: accent.withOpacity(0.87),
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: C.primaryLight,
+                          borderRadius: BorderRadius.circular(C.radiusInner),
+                          border: Border.all(
+                            color: C.primary.withOpacity(0.18),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: C.primary,
+                              size: 15,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Wash camote thoroughly and peel if the skin is damaged.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: C.primary,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _badge(String label, IconData icon, Color color) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 10, color: color),
+      const SizedBox(width: 3),
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ],
+  );
+}
+
+// ============================================================================
+// DETECTIONS PAGE (formerly History)
+// ============================================================================
+
+class DetectionsPage extends StatefulWidget {
+  const DetectionsPage({super.key});
+  @override
+  State<DetectionsPage> createState() => _DetectionsPageState();
+}
+
+class _DetectionsPageState extends State<DetectionsPage> {
   List<DetectionLog> _logs = [];
   bool _loading = true;
-
   @override
   void initState() {
     super.initState();
@@ -2771,7 +4366,6 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   void add(DetectionLog log) => setState(() => _logs.insert(0, log));
-
   Future<void> _del(DetectionLog log) async {
     setState(() => _loading = true);
     await DetectionLogger.delete(log.id);
@@ -2796,20 +4390,16 @@ class _HistoryPageState extends State<HistoryPage> {
                 child: const Icon(Icons.delete_outline, color: C.err, size: 28),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Clear All History?',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: C.textPrimary,
-                ),
+              Text(
+                'Clear All Detections?',
+                style: T.title,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text(
-                'This will permanently delete all detection history.',
+              Text(
+                'This permanently deletes all saved detections.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: C.textSec, height: 1.5),
+                style: T.body,
               ),
               const SizedBox(height: 22),
               Row(
@@ -2821,35 +4411,18 @@ class _HistoryPageState extends State<HistoryPage> {
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         side: const BorderSide(color: C.borderMid),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(C.radiusInner),
                         ),
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: C.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: Text('Cancel', style: T.subhead),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: C.err,
-                        foregroundColor: C.white,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Clear All',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                    child: _dlgBtn(
+                      'Clear All',
+                      onTap: () => Navigator.pop(context, true),
+                      bg: C.err,
                     ),
                   ),
                 ],
@@ -2885,24 +4458,27 @@ class _HistoryPageState extends State<HistoryPage> {
           log: log,
           top: top,
           variety: v,
-          onDelete: () async {
-            await _del(log);
-          },
+          onDelete: () async => _del(log),
         ),
       );
 
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: C.bg,
-    appBar: _appBar('Detection History'),
+    appBar: _appBar('Detections'),
     body: Column(
       children: [
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          margin: const EdgeInsets.fromLTRB(
+            C.paddingPage,
+            12,
+            C.paddingPage,
+            0,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: C.surface,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(C.radiusCard),
             border: Border.all(color: C.border),
           ),
           child: Row(
@@ -2914,14 +4490,14 @@ class _HistoryPageState extends State<HistoryPage> {
                     Text(
                       '${_logs.length}',
                       style: const TextStyle(
-                        fontSize: 28,
+                        fontSize: 26,
                         fontWeight: FontWeight.w900,
                         color: C.primary,
                       ),
                     ),
                     Text(
                       _logs.length == 1 ? 'detection' : 'detections',
-                      style: const TextStyle(fontSize: 12, color: C.textSec),
+                      style: T.caption,
                     ),
                   ],
                 ),
@@ -2936,14 +4512,14 @@ class _HistoryPageState extends State<HistoryPage> {
                     ),
                     decoration: BoxDecoration(
                       color: C.errLight,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(C.radiusInner),
                     ),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.delete_outline, color: C.err, size: 15),
                         SizedBox(width: 5),
                         Text(
-                          'Clear',
+                          'Clear All',
                           style: TextStyle(
                             color: C.err,
                             fontSize: 12,
@@ -2975,24 +4551,14 @@ class _HistoryPageState extends State<HistoryPage> {
                         ),
                         child: const Icon(
                           Icons.history,
-                          size: 40,
+                          size: 38,
                           color: C.textMuted,
                         ),
                       ),
                       const SizedBox(height: 14),
-                      const Text(
-                        'No detection history',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: C.textPrimary,
-                        ),
-                      ),
+                      Text('No detections yet', style: T.heading),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Scan a camote to get started',
-                        style: TextStyle(fontSize: 13, color: C.textSec),
-                      ),
+                      Text('Scan and save a camote', style: T.body),
                     ],
                   ),
                 )
@@ -3001,7 +4567,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   color: C.primary,
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: C.paddingPage,
                       vertical: 4,
                     ),
                     itemCount: _logs.length,
@@ -3011,13 +4577,15 @@ class _HistoryPageState extends State<HistoryPage> {
                           ? null
                           : log.results.first;
                       final v = _v(top?.className ?? '');
-                      return _HistoryCard(
-                        log: log,
-                        top: top,
-                        variety: v,
-                        index: i,
-                        onTap: () => _detail(log, top, v),
-                        onDelete: () => _del(log),
+                      return _Stagger(
+                        index: i > 5 ? 5 : i,
+                        child: _DetectionCard(
+                          log: log,
+                          top: top,
+                          variety: v,
+                          onTap: () => _detail(log, top, v),
+                          onDelete: () => _del(log),
+                        ),
                       );
                     },
                   ),
@@ -3028,21 +4596,18 @@ class _HistoryPageState extends State<HistoryPage> {
   );
 }
 
-class _HistoryCard extends StatelessWidget {
+class _DetectionCard extends StatelessWidget {
   final DetectionLog log;
   final DetectionResult? top;
   final CamoteVariety? variety;
-  final int index;
   final VoidCallback onTap, onDelete;
-  const _HistoryCard({
+  const _DetectionCard({
     required this.log,
     required this.top,
     required this.variety,
-    required this.index,
     required this.onTap,
     required this.onDelete,
   });
-
   @override
   Widget build(BuildContext context) => _TappableCard(
     onTap: onTap,
@@ -3054,17 +4619,16 @@ class _HistoryCard extends StatelessWidget {
           Container(
             width: 4,
             decoration: BoxDecoration(
-              color: _varietyAccent(top?.className ?? ''),
+              color: _accent(top?.className ?? ''),
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(13),
-                bottomLeft: Radius.circular(13),
+                topLeft: Radius.circular(C.radiusCard - 1),
+                bottomLeft: Radius.circular(C.radiusCard - 1),
               ),
             ),
           ),
           ClipRRect(
-            borderRadius: BorderRadius.zero,
             child: SizedBox(
-              width: 80,
+              width: 82,
               child: File(log.imagePath).existsSync()
                   ? Image.file(File(log.imagePath), fit: BoxFit.cover)
                   : Container(
@@ -3086,16 +4650,12 @@ class _HistoryCard extends StatelessWidget {
                 children: [
                   Text(
                     top?.className.cap ?? 'Unknown',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: C.textPrimary,
-                    ),
+                    style: T.heading,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (variety != null) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       variety!.commonName,
                       style: const TextStyle(
@@ -3107,7 +4667,7 @@ class _HistoryCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       const Icon(
@@ -3119,10 +4679,7 @@ class _HistoryCard extends StatelessWidget {
                       Flexible(
                         child: Text(
                           TimeFormatter.short(log.timestamp),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: C.textMuted,
-                          ),
+                          style: T.caption,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -3149,7 +4706,7 @@ class _HistoryCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: C.primaryLight,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(C.radiusPill),
                           ),
                           child: Text(
                             '${(top!.confidence * 100).toStringAsFixed(0)}%',
@@ -3167,22 +4724,23 @@ class _HistoryCard extends StatelessWidget {
               ),
             ),
           ),
-          Container(
-            width: 48,
-            padding: const EdgeInsets.only(bottom: 12, right: 4),
-            alignment: Alignment.bottomCenter,
-            child: GestureDetector(
-              onTap: onDelete,
-              child: Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: C.errLight,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: const Icon(
-                  Icons.delete_outline_rounded,
-                  size: 16,
-                  color: C.err,
+          Padding(
+            padding: const EdgeInsets.only(right: 10, bottom: 12, top: 12),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: GestureDetector(
+                onTap: onDelete,
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: C.errLight,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    size: 16,
+                    color: C.err,
+                  ),
                 ),
               ),
             ),
@@ -3204,7 +4762,6 @@ class _DetailSheet extends StatelessWidget {
     this.variety,
     required this.onDelete,
   });
-
   @override
   Widget build(BuildContext context) => DraggableScrollableSheet(
     expand: false,
@@ -3235,25 +4792,10 @@ class _DetailSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Detection Details',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: C.textSec,
-                        ),
-                      ),
+                      Text('Detection Details', style: T.caption),
                       if (top != null) ...[
                         const SizedBox(height: 2),
-                        Text(
-                          top!.className.cap,
-                          style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: C.textPrimary,
-                            height: 1.1,
-                          ),
-                        ),
+                        Text(top!.className.cap, style: T.display),
                         if (variety != null)
                           Text(
                             variety!.commonName,
@@ -3289,7 +4831,7 @@ class _DetailSheet extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(C.radiusCard),
                   child: SizedBox(
                     height: 240,
                     child: File(log.imagePath).existsSync()
@@ -3312,7 +4854,20 @@ class _DetailSheet extends StatelessWidget {
                       children: [
                         const _SectionHeader('Confidence'),
                         const SizedBox(height: 14),
-                        _ConfBar(top!.confidence),
+                        Row(
+                          children: [
+                            const Icon(Icons.percent, color: C.primary),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${(top!.confidence * 100).toStringAsFixed(0)}%',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: C.primary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -3335,11 +4890,7 @@ class _DetailSheet extends StatelessWidget {
                           Flexible(
                             child: Text(
                               TimeFormatter.full(log.timestamp),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: C.textPrimary,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: T.subhead,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -3384,7 +4935,7 @@ class _DetailSheet extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(C.radiusInner),
                       ),
                       textStyle: const TextStyle(
                         fontSize: 14,
@@ -3411,14 +4962,16 @@ class LibraryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: C.bg,
-    appBar: _appBar('Crop Library'),
+    appBar: _appBar('Library'),
     body: SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(C.paddingPage),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 4),
-          ...camoteVarieties.map((v) => _VarietyCard(v)),
+          ...camoteVarieties.asMap().entries.map(
+            (e) => _Stagger(index: e.key, child: _VarietyCard(e.value)),
+          ),
         ],
       ),
     ),
@@ -3428,100 +4981,221 @@ class LibraryPage extends StatelessWidget {
 class _VarietyCard extends StatelessWidget {
   final CamoteVariety v;
   const _VarietyCard(this.v);
-
   @override
-  Widget build(BuildContext context) => _TappableCard(
-    onTap: () => _show(context),
-    margin: const EdgeInsets.only(bottom: 14),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(13),
-            topRight: Radius.circular(13),
-          ),
-          child: SizedBox(
-            height: 160,
-            width: double.infinity,
-            child: Image.asset(
-              v.imagePath,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: C.bg,
-                child: const Center(
-                  child: Icon(Icons.image, color: C.textMuted, size: 40),
-                ),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+  Widget build(BuildContext context) {
+    final accentColor = _accent(v.name);
+    return _TappableCard(
+      onTap: () => _show(context),
+      margin: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      v.name,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: C.textPrimary,
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(C.radiusCard - 1),
+                  topRight: Radius.circular(C.radiusCard - 1),
+                ),
+                child: SizedBox(
+                  height: 150,
+                  width: double.infinity,
+                  child: Image.asset(
+                    v.imagePath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: C.bg,
+                      child: const Center(
+                        child: Icon(Icons.image, color: C.textMuted, size: 40),
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      v.commonName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: C.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      v.scientificName,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: C.textSec,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: C.primaryLight,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: const Icon(
-                  Icons.chevron_right,
-                  size: 16,
-                  color: C.primary,
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(C.radiusPill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.restaurant_menu,
+                        size: 11,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${v.recipes.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(v.name, style: T.heading),
+                          const SizedBox(height: 2),
+                          Text(
+                            v.commonName,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: accentColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: C.primaryLight,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right,
+                        size: 16,
+                        color: C.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _miniStat('GI', _giLabel(v.name), accentColor),
+                    const SizedBox(width: 8),
+                    _miniStat('Daily Max', _dailyMaxShort(v.name), accentColor),
+                    const SizedBox(width: 8),
+                    _miniStat('kcal/100g', _kcal(v.name), accentColor),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStat(String label, String value, Color color) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              color: color.withOpacity(0.7),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     ),
   );
+
+  static String _giLabel(String n) =>
+      n.toLowerCase() == 'tapol' ? 'Low–Med' : 'Medium';
+  static String _dailyMaxShort(String n) =>
+      n.toLowerCase() == 'tapol' ? '150–250 g' : '150–200 g';
+  static String _kcal(String n) {
+    switch (n.toLowerCase()) {
+      case 'tapol':
+        return '76 kcal';
+      case 'kadabaw':
+        return '88 kcal';
+      default:
+        return '86 kcal';
+    }
+  }
 
   void _show(BuildContext context) => showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => DraggableScrollableSheet(
+    builder: (_) => _LibraryDetailSheet(variety: v),
+  );
+}
+
+// ============================================================================
+// LIBRARY DETAIL SHEET — 5 tabs
+// ============================================================================
+
+class _LibraryDetailSheet extends StatefulWidget {
+  final CamoteVariety variety;
+  const _LibraryDetailSheet({required this.variety});
+  @override
+  State<_LibraryDetailSheet> createState() => _LibraryDetailSheetState();
+}
+
+class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
+    with TickerProviderStateMixin {
+  late TabController _tab;
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 5, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = widget.variety;
+    final accentColor = _accent(v.name);
+    final accentLightColor = _accentLight(v.name);
+    return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.90,
+      initialChildSize: 0.92,
       minChildSize: 0.5,
-      maxChildSize: 0.95,
+      maxChildSize: 0.97,
       builder: (_, sc) => Container(
         decoration: const BoxDecoration(
           color: C.surface,
@@ -3546,19 +5220,12 @@ class _VarietyCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          v.name,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: C.textPrimary,
-                          ),
-                        ),
+                        Text(v.name, style: T.title),
                         Text(
                           v.commonName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            color: C.primary,
+                            color: accentColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -3584,112 +5251,890 @@ class _VarietyCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(height: 1, color: C.border),
+            Container(
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: C.border)),
+              ),
+              child: TabBar(
+                controller: _tab,
+                labelColor: accentColor,
+                unselectedLabelColor: C.textSec,
+                indicatorColor: accentColor,
+                isScrollable: true,
+                labelStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                tabs: const [
+                  Tab(text: 'Overview'),
+                  Tab(text: 'Nutrition'),
+                  Tab(text: 'Intake'),
+                  Tab(text: 'Recipes'),
+                  Tab(text: 'For Who'),
+                ],
+              ),
+            ),
             Expanded(
-              child: ListView(
-                controller: sc,
-                padding: const EdgeInsets.all(20),
+              child: TabBarView(
+                controller: _tab,
                 children: [
-                  _ImageCarousel(imagePaths: v.imagePaths),
-                  const SizedBox(height: 16),
-                  _Card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _SectionHeader('Characteristics'),
-                        const SizedBox(height: 6),
-                        _CharRow(Icons.straighten, 'Shape', v.shape),
-                        const Divider(height: 1, color: C.border),
-                        _CharRow(
-                          Icons.palette_outlined,
-                          'Skin Color',
-                          v.skinColor,
+                  // ── OVERVIEW ─────────────────────────────────────────────────
+                  ListView(
+                    padding: const EdgeInsets.all(C.paddingPage),
+                    children: [
+                      _ImageCarousel(imagePaths: v.imagePaths),
+                      const SizedBox(height: 16),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionHeader('Description'),
+                            const SizedBox(height: 10),
+                            Text(v.description, style: T.body),
+                          ],
                         ),
-                        const Divider(height: 1, color: C.border),
-                        _CharRow(
-                          Icons.circle_outlined,
-                          'Flesh Color',
-                          v.fleshColor,
+                      ),
+                      const SizedBox(height: 12),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionHeader('Characteristics'),
+                            const SizedBox(height: 4),
+                            const Divider(height: 1, color: C.border),
+                            _CharRow(Icons.straighten, 'Shape', v.shape),
+                            const Divider(height: 1, color: C.border),
+                            _CharRow(
+                              Icons.palette_outlined,
+                              'Skin Color',
+                              v.skinColor,
+                            ),
+                            const Divider(height: 1, color: C.border),
+                            _CharRow(
+                              Icons.circle_outlined,
+                              'Flesh Color',
+                              v.fleshColor,
+                            ),
+                            const Divider(height: 1, color: C.border),
+                            _CharRow(Icons.texture, 'Texture', v.texture),
+                          ],
                         ),
-                        const Divider(height: 1, color: C.border),
-                        _CharRow(Icons.texture, 'Texture', v.texture),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionHeader('Health Benefits'),
+                            const SizedBox(height: 10),
+                            ...v.benefits.map((b) => _bullet(b, accentColor)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionHeader('Traditional Dishes'),
+                            const SizedBox(height: 10),
+                            ...v.dishes.map((d) => _bullet(d, accentColor)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _Card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _SectionHeader('Overview'),
-                        const SizedBox(height: 10),
-                        Text(
-                          v.description,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: C.textSec,
-                            height: 1.6,
+
+                  // ── NUTRITION ────────────────────────────────────────────────
+                  ListView(
+                    padding: const EdgeInsets.all(C.paddingPage),
+                    children: [
+                      _Stagger(
+                        index: 0,
+                        child: _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionHeader('Per 100 g Serving'),
+                              const SizedBox(height: 14),
+                              GridView.count(
+                                crossAxisCount: 2,
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                                childAspectRatio: 2.4,
+                                children: [
+                                  _nutCard(
+                                    'Calories',
+                                    v.medicalInfo.calories100g,
+                                    Icons.local_fire_department,
+                                  ),
+                                  _nutCard(
+                                    'Carbohydrates',
+                                    v.medicalInfo.carbs100g,
+                                    Icons.grain,
+                                  ),
+                                  _nutCard(
+                                    'Dietary Fiber',
+                                    v.medicalInfo.fiber,
+                                    Icons.spa,
+                                  ),
+                                  _nutCard(
+                                    'Potassium',
+                                    v.medicalInfo.potassium,
+                                    Icons.bolt,
+                                  ),
+                                  _nutCard(
+                                    'Vitamin A',
+                                    v.medicalInfo.vitaminA,
+                                    Icons.visibility,
+                                  ),
+                                  _nutCard(
+                                    'Vitamin C',
+                                    v.medicalInfo.vitaminC,
+                                    Icons.eco,
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Stagger(
+                        index: 1,
+                        child: _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionHeader('Glycaemic Profile'),
+                              const SizedBox(height: 12),
+                              _giRow(
+                                'Glycaemic Index',
+                                v.medicalInfo.glycemicIndex,
+                                accentColor,
+                              ),
+                              _giRow(
+                                'Glycaemic Load',
+                                v.medicalInfo.glycemicLoad,
+                                accentColor,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Stagger(
+                        index: 2,
+                        child: _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionHeader('Medicinal Uses'),
+                              const SizedBox(height: 10),
+                              ...v.medicalInfo.medicinalUses.map(
+                                (u) => _bullet(u, C.primary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (v.medicalInfo.drugInteractions.isNotEmpty)
+                        _Stagger(
+                          index: 3,
+                          child: _Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _SectionHeader(
+                                  'Drug Interactions',
+                                  trailing: _Pill(
+                                    'Consult a doctor',
+                                    bg: C.warnLight,
+                                    fg: C.warn,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                ...v.medicalInfo.drugInteractions.map(
+                                  (d) => _warnItem(d, C.warn, C.warnLight),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      if (v.medicalInfo.contraindications.isNotEmpty)
+                        _Stagger(
+                          index: 4,
+                          child: _Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _SectionHeader(
+                                  'Contraindications',
+                                  trailing: _Pill(
+                                    'Important',
+                                    bg: C.errLight,
+                                    fg: C.err,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                ...v.medicalInfo.contraindications.map(
+                                  (d) => _warnItem(d, C.err, C.errLight),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _Card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _SectionHeader('Health Benefits'),
-                        const SizedBox(height: 10),
-                        ...v.benefits.map(_bullet),
-                      ],
-                    ),
+
+                  // ── INTAKE ────────────────────────────────────────────────────
+                  ListView(
+                    padding: const EdgeInsets.all(C.paddingPage),
+                    children: [
+                      _Stagger(
+                        index: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                accentColor,
+                                accentColor.withOpacity(0.78),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(C.radiusCard),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Recommended Intake',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  _intakeHero('Daily Max', v.intake.dailyMax),
+                                  const SizedBox(width: 10),
+                                  _intakeHero('Weekly Max', v.intake.weeklyMax),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  _intakeHero(
+                                    'Serving Size',
+                                    v.intake.servingSize,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  _intakeHero('Best Time', v.intake.bestTime),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Stagger(
+                        index: 1,
+                        child: _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.block,
+                                    size: 17,
+                                    color: C.warn,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('Limitations', style: T.subhead),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              ...v.intake.limitations.map(
+                                (l) => _warnItem(l, C.warn, C.warnLight),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Stagger(
+                        index: 2,
+                        child: _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.info_outline,
+                                    size: 17,
+                                    color: C.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('General Cautions', style: T.subhead),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              ...v.intake.cautions.map(
+                                (c) => _warnItem(c, C.warn, C.warnLight),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Stagger(
+                        index: 3,
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: C.primaryLight,
+                            borderRadius: BorderRadius.circular(C.radiusCard),
+                            border: Border.all(
+                              color: C.primary.withOpacity(0.18),
+                            ),
+                          ),
+                          child: const Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.health_and_safety_outlined,
+                                color: C.primary,
+                                size: 20,
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Consult a nutritionist or physician before major dietary changes.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: C.primary,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _Card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _SectionHeader('Popular Dishes'),
-                        const SizedBox(height: 10),
-                        ...v.dishes.map(_bullet),
-                      ],
-                    ),
+
+                  // ── RECIPES ───────────────────────────────────────────────────
+                  ListView(
+                    padding: const EdgeInsets.all(C.paddingPage),
+                    children: v.recipes
+                        .asMap()
+                        .entries
+                        .map(
+                          (e) => _Stagger(
+                            index: e.key,
+                            child: _ExpandableRecipeCard(
+                              recipe: e.value,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
-                  const SizedBox(height: 16),
+
+                  // ── FOR WHO ───────────────────────────────────────────────────
+                  ListView(
+                    padding: const EdgeInsets.all(C.paddingPage),
+                    children: [
+                      _Stagger(
+                        index: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                accentColor.withOpacity(0.1),
+                                accentLightColor,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(C.radiusCard),
+                            border: Border.all(
+                              color: accentColor.withOpacity(0.18),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.people_outline,
+                                    color: accentColor,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Recommended For',
+                                    style: T.heading.copyWith(
+                                      color: accentColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              ...v.targetedPeople.asMap().entries.map(
+                                (e) => _Stagger(
+                                  index: e.key,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            color: accentColor,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '${e.key + 1}',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 5,
+                                            ),
+                                            child: Text(
+                                              e.value,
+                                              style: T.body.copyWith(
+                                                color: C.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Stagger(
+                        index: 1,
+                        child: _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionHeader('Health Benefits'),
+                              const SizedBox(height: 10),
+                              ...v.benefits.asMap().entries.map(
+                                (e) => _Stagger(
+                                  index: e.key,
+                                  child: _bullet(e.value, accentColor),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
 
-  Widget _bullet(String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
+  Widget _nutCard(String label, String value, IconData icon) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: C.primary.withOpacity(0.06),
+      borderRadius: BorderRadius.circular(C.radiusInner),
+      border: Border.all(color: C.primary.withOpacity(0.14)),
+    ),
     child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          margin: const EdgeInsets.only(top: 5),
-          width: 5,
-          height: 5,
-          decoration: const BoxDecoration(
-            color: C.primary,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 10),
+        Icon(icon, size: 18, color: C.primary),
+        const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            t,
-            style: const TextStyle(fontSize: 13, color: C.textSec, height: 1.5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: C.primary.withOpacity(0.7),
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: C.primary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ],
     ),
   );
+
+  Widget _giRow(String label, String value, Color accentColor) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      children: [
+        Expanded(child: Text(label, style: T.label)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: accentColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: accentColor,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _intakeHero(String label, String value) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(C.radiusInner),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white60,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// ── Expandable recipe card (Library recipes tab) ──────────────────────────────
+class _ExpandableRecipeCard extends StatefulWidget {
+  final CamoteRecipe recipe;
+  final Color accentColor;
+  const _ExpandableRecipeCard({
+    required this.recipe,
+    required this.accentColor,
+  });
+  @override
+  State<_ExpandableRecipeCard> createState() => _ExpandableRecipeCardState();
+}
+
+class _ExpandableRecipeCardState extends State<_ExpandableRecipeCard> {
+  bool _expanded = false;
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.recipe;
+    final accent = widget.accentColor;
+    return GestureDetector(
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: C.surface,
+          borderRadius: BorderRadius.circular(C.radiusCard),
+          border: Border.all(
+            color: _expanded ? accent.withOpacity(0.35) : C.border,
+            width: _expanded ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _expanded
+                  ? accent.withOpacity(0.1)
+                  : const Color(0x08000000),
+              blurRadius: _expanded ? 14 : 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(C.radiusCard - 1),
+                    bottomLeft: Radius.circular(C.radiusCard - 1),
+                  ),
+                  child: SizedBox(
+                    width: 90,
+                    height: 90,
+                    child: Image.asset(
+                      r.imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: accent.withOpacity(0.1),
+                        child: Icon(
+                          Icons.restaurant_menu,
+                          color: accent,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(r.name, style: T.subhead),
+                        const SizedBox(height: 4),
+                        Text(
+                          r.description,
+                          style: T.body,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            _chip(r.difficulty, Icons.bar_chart, accent),
+                            const SizedBox(width: 6),
+                            _chip(
+                              '${r.calories} kcal',
+                              Icons.local_fire_department_outlined,
+                              accent,
+                            ),
+                            const Spacer(),
+                            Icon(
+                              _expanded
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              color: C.textMuted,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_expanded) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                child: const Divider(height: 1, color: C.border),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _metaItem('Prep', r.prepTime, Icons.access_time, accent),
+                    Container(width: 1, height: 30, color: C.border),
+                    _metaItem(
+                      'Cook',
+                      r.cookTime,
+                      Icons.local_fire_department_outlined,
+                      accent,
+                    ),
+                    Container(width: 1, height: 30, color: C.border),
+                    _metaItem(
+                      'Serves',
+                      '${r.servings}',
+                      Icons.people_outline,
+                      accent,
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Text(
+                  'Ingredients',
+                  style: T.label.copyWith(color: accent),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Column(
+                  children: r.ingredients
+                      .map(
+                        (i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 5),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.only(top: 6),
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(i, style: T.body)),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                child: Text('Steps', style: T.label.copyWith(color: accent)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  children: r.steps
+                      .asMap()
+                      .entries
+                      .map(
+                        (e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${e.key + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(e.value, style: T.body),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(String label, IconData icon, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 10, color: color),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ],
+    ),
+  );
+  Widget _metaItem(String label, String value, IconData icon, Color color) =>
+      Column(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(height: 2),
+          Text(label, style: T.caption),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      );
 }
 
 // ============================================================================
