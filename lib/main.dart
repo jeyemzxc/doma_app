@@ -1,10 +1,8 @@
-// lib/main.dart — Doma Camote Classifier (UI v10 — final polish)
-// Changes:
-//   • Removed horizontal scanning line from Scan page.
-//   • Made corner brackets thicker (strokeWidth 4.0).
-//   • Minor UI polish for consistency.
-//   • Save Detection button works; no auto‑save.
-//   • Full dataset included.
+// lib/main.dart — Doma Camote Classifier (UI v25.1)
+// Changes vs v25:
+//   • Scan Page Action Bar: Changed the horizontal background bar from dark green
+//     to white/off-white. Adjusted text and icon colors for visibility.
+//   • Kept the circular buttons for Gallery/Flip with a soft gray background.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -41,7 +39,7 @@ void main() async {
 }
 
 // ============================================================================
-// UNIFIED DESIGN TOKENS — GREEN PALETTE ONLY
+// DESIGN TOKENS
 // ============================================================================
 
 class C {
@@ -53,15 +51,16 @@ class C {
   static const primaryLight = Color(0xFFE6F4ED);
   static const primaryTint = Color(0xFFF2FAF6);
 
-  static const bg = Color(0xFFF6F7F9);
+  static const bg = Color(0xFFF5F7F8);
   static const surface = Color(0xFFFFFFFF);
+  static const surfaceDim = Color(0xFFF0F2F5); // For off-white buttons
 
-  static const border = Color(0xFFE8ECF0);
-  static const borderMid = Color(0xFFCDD3DA);
+  static const border = Color(0xFFE6EBEF);
+  static const borderMid = Color(0xFFCBD2D9);
 
-  static const textPrimary = Color(0xFF0F1923);
-  static const textSec = Color(0xFF5A6475);
-  static const textMuted = Color(0xFF9AA3B0);
+  static const textPrimary = Color(0xFF0D1720);
+  static const textSec = Color(0xFF566072);
+  static const textMuted = Color(0xFF98A1AF);
 
   static const err = Color(0xFFD93025);
   static const errLight = Color(0xFFFEF1F0);
@@ -69,13 +68,16 @@ class C {
   static const warnLight = Color(0xFFFFF8E6);
 
   static const white = Colors.white;
-  static const camOverlayDark = Color(0xFF071A10);
 
   static const double radiusCard = 16.0;
   static const double radiusInner = 10.0;
   static const double radiusPill = 20.0;
   static const double paddingCard = 18.0;
   static const double paddingPage = 16.0;
+
+  static const double carouselCardW = 168.0;
+  static const double carouselCardH = 200.0;
+  static const double carouselImageH = 110.0;
 }
 
 // ============================================================================
@@ -84,43 +86,60 @@ class C {
 
 class T {
   static const display = TextStyle(
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: FontWeight.w800,
     color: C.textPrimary,
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
     height: 1.15,
   );
   static const title = TextStyle(
-    fontSize: 17,
-    fontWeight: FontWeight.w700,
+    fontSize: 18,
+    fontWeight: FontWeight.w800,
     color: C.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.35,
+    height: 1.2,
   );
   static const heading = TextStyle(
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: FontWeight.w700,
     color: C.textPrimary,
+    letterSpacing: -0.15,
+    height: 1.25,
   );
   static const subhead = TextStyle(
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: FontWeight.w600,
     color: C.textPrimary,
+    letterSpacing: -0.05,
+    height: 1.3,
   );
   static const body = TextStyle(
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: FontWeight.w400,
     color: C.textSec,
     height: 1.55,
+    letterSpacing: -0.05,
   );
   static const caption = TextStyle(
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: FontWeight.w500,
     color: C.textMuted,
+    letterSpacing: 0.1,
+    height: 1.3,
   );
   static const label = TextStyle(
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: FontWeight.w600,
     color: C.textSec,
+    letterSpacing: 0.05,
+    height: 1.3,
+  );
+  static const overline = TextStyle(
+    fontSize: 10.5,
+    fontWeight: FontWeight.w700,
+    color: C.textMuted,
+    letterSpacing: 1.2,
+    height: 1.2,
   );
 }
 
@@ -131,19 +150,17 @@ class T {
 Color _accent(String cls) {
   switch (cls.toLowerCase()) {
     case 'minamon':
-      return const Color(0xFFDE9F00);
+      return const Color(0xFFD4A017);
     case 'tapol':
-      return const Color(0xFF6B3BA9);
+      return const Color(0xFF7B4FC9);
     case 'kadabaw':
-      return const Color(0xFFC40950);
+      return const Color(0xFFD6196B);
     case 'kadulaw':
-      return const Color(0xFFD85C1C);
+      return const Color(0xFFE05A17);
     default:
       return C.primary;
   }
 }
-
-Color _accentLight(String cls) => C.primaryLight;
 
 IconData _varietyIcon(String cls) {
   switch (cls.toLowerCase()) {
@@ -257,17 +274,16 @@ class CamoteVariety {
 }
 
 // ============================================================================
-// VARIETY DATA (FULL LIST)
+// VARIETY DATA
 // ============================================================================
 
 const List<CamoteVariety> camoteVarieties = [
-  // ── KADULAW (Orange) ──────────────────────────────────────────────────────
   CamoteVariety(
     name: 'Kadulaw',
     commonName: 'Orange Sweet Potato',
     scientificName: 'Ipomoea batatas',
     skinColor: 'Light orange to peach',
-    fleshColor: 'Deep orange',
+    fleshColor: 'Orange',
     shape: 'Elongated / Fusiform',
     texture: 'Smooth / Firm',
     imagePath: 'assets/images/orange_camote.jpg',
@@ -439,13 +455,12 @@ const List<CamoteVariety> camoteVarieties = [
     ),
   ),
 
-  // ── MINAMON (Yellow) ──────────────────────────────────────────────────────
   CamoteVariety(
     name: 'Minamon',
     commonName: 'Yellow Sweet Potato',
     scientificName: 'Ipomoea batatas',
     skinColor: 'Yellow to tan',
-    fleshColor: 'Bright yellow',
+    fleshColor: 'Yellow',
     shape: 'Bent / Curved',
     texture: 'Lumpy / Slightly Gritty',
     imagePath: 'assets/images/yellow_camote.jpg',
@@ -615,20 +630,19 @@ const List<CamoteVariety> camoteVarieties = [
     ),
   ),
 
-  // ── TAPOL (White/Purple flesh) ────────────────────────────────────────────
   CamoteVariety(
     name: 'Tapol',
     commonName: 'White Sweet Potato',
     scientificName: 'Ipomoea batatas',
     skinColor: 'White to cream',
-    fleshColor: 'Pale purple to white',
+    fleshColor: 'Purple',
     shape: 'Round / Oblong',
     texture: 'Smooth / Firm',
     imagePath: 'assets/images/white_camote.jpg',
     description:
-        'White-to-cream skin, round shape, mild flavour — the most versatile '
-        'of the four varieties. Has the lowest glycaemic index, making it '
-        'ideal for blood sugar management.',
+        'White-to-cream skin, round shape with purple-tinged flesh — the most '
+        'versatile of the four varieties. Has the lowest glycaemic index, '
+        'making it ideal for blood sugar management.',
     benefits: [
       'Lowest glycaemic index of the four varieties',
       'Mild flavour, very versatile for cooking',
@@ -791,19 +805,18 @@ const List<CamoteVariety> camoteVarieties = [
     ),
   ),
 
-  // ── KADABAW (Purple skin) ──────────────────────────────────────────────────
   CamoteVariety(
     name: 'Kadabaw',
     commonName: 'Violet Sweet Potato',
     scientificName: 'Ipomoea batatas',
     skinColor: 'Purple to reddish-violet',
-    fleshColor: 'Yellow to cream',
+    fleshColor: 'Yellow',
     shape: 'Irregular',
     texture: 'Rough / Rustic',
     imagePath: 'assets/images/purple_camote.jpg',
     description:
-        'Striking violet skin with contrasting yellow-cream flesh. Highest '
-        'in anthocyanins among the four varieties — antioxidants studied for '
+        'Striking violet skin with contrasting yellow flesh. Highest in '
+        'anthocyanins among the four varieties — antioxidants studied for '
         'brain, heart, and cancer-preventive benefits.',
     benefits: [
       'Highest in anthocyanins of the four varieties',
@@ -972,7 +985,7 @@ const List<CamoteVariety> camoteVarieties = [
 ];
 
 // ============================================================================
-// DETECTION MODELS (unchanged)
+// DETECTION MODELS
 // ============================================================================
 
 class _Det {
@@ -983,13 +996,13 @@ class _Det {
 }
 
 class _ScanResult {
-  final DetectionResult? winner;
+  final List<DetectionResult> detections;
   final _ScanState state;
-  const _ScanResult({this.winner, this.state = _ScanState.ok});
-  bool get found => winner != null && state == _ScanState.ok;
+  const _ScanResult({this.detections = const [], this.state = _ScanState.ok});
+  bool get found => detections.isNotEmpty && state == _ScanState.ok;
 }
 
-enum _ScanState { ok, notFound, multipleVariants }
+enum _ScanState { ok, notFound }
 
 class DetectionResult {
   final String className;
@@ -1082,7 +1095,7 @@ class DetectionLogger {
 }
 
 // ============================================================================
-// RESHAPE HELPER (unchanged)
+// RESHAPE HELPER
 // ============================================================================
 
 extension ReshapeF on Float32List {
@@ -1109,15 +1122,15 @@ extension ReshapeF on Float32List {
 }
 
 // ============================================================================
-// CLASSIFIER (unchanged)
+// CLASSIFIER
 // ============================================================================
 
 class CamoteClassifier {
   Interpreter? _interp;
   int _inSz = 640;
 
-  static const double _rawGate = 0.70;
-  static const double _displayGate = 0.70;
+  static const double _rawGate = 0.55;
+  static const double _displayGate = 0.55;
   static const double _iouThres = 0.45;
   static const double _minAspect = 0.25;
   static const double _maxAspect = 4.0;
@@ -1267,21 +1280,19 @@ class CamoteClassifier {
     final mapped = _unmap(raw, image.width.toDouble(), image.height.toDouble());
     final nmsed = _nms(mapped);
     if (nmsed.isEmpty) return const _ScanResult(state: _ScanState.notFound);
-    final classes = nmsed.map((d) => d.cls).toSet();
-    if (classes.length > 1)
-      return const _ScanResult(state: _ScanState.multipleVariants);
-    final w = nmsed.first;
-    if (w.score < _displayGate)
-      return const _ScanResult(state: _ScanState.notFound);
-    final r = DetectionResult(
-      className: labels[w.cls.clamp(0, labels.length - 1)],
-      confidence: w.score,
-      x: w.box.left,
-      y: w.box.top,
-      width: w.box.width,
-      height: w.box.height,
-    );
-    return _ScanResult(winner: r, state: _ScanState.ok);
+    final dets = nmsed
+        .map(
+          (w) => DetectionResult(
+            className: labels[w.cls.clamp(0, labels.length - 1)],
+            confidence: w.score,
+            x: w.box.left,
+            y: w.box.top,
+            width: w.box.width,
+            height: w.box.height,
+          ),
+        )
+        .toList();
+    return _ScanResult(detections: dets, state: _ScanState.ok);
   }
 
   List<_Det> _decodeYolo(List<int> shape, int nCls, Float32List input) {
@@ -1469,66 +1480,183 @@ class CamoteClassifier {
 // ============================================================================
 
 class _BBPainter extends CustomPainter {
-  final DetectionResult? det;
+  final List<DetectionResult> dets;
   final double? imageWidth;
   final double? imageHeight;
-  const _BBPainter({this.det, this.imageWidth, this.imageHeight});
+  final String? highlight;
+  final double dim;
+  final bool emphasiseSolo;
+
+  const _BBPainter({
+    this.dets = const [],
+    this.imageWidth,
+    this.imageHeight,
+    this.highlight,
+    this.dim = 0.0,
+    this.emphasiseSolo = false,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final d = det;
-    if (d == null) return;
+    if (dets.isEmpty) return;
+
     final cw = size.width, ch = size.height;
     final iw = imageWidth ?? 1.0, ih = imageHeight ?? 1.0;
-    final scaleX = cw / iw;
-    final scaleY = ch / ih;
-    final scale = math.min(scaleX, scaleY);
+    final scale = math.max(cw / iw, ch / ih);
     final displayWidth = iw * scale;
     final displayHeight = ih * scale;
     final offsetX = (cw - displayWidth) / 2;
     final offsetY = (ch - displayHeight) / 2;
 
-    final color = _accent(d.className);
-    final boxP = Paint()
-      ..color = color
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-    final bgP = Paint()..color = color.withOpacity(0.93);
-    final r = Rect.fromLTWH(
+    final multi = dets.length > 1;
+    final hi = highlight?.toLowerCase();
+    final hasHi =
+        hi != null &&
+        dim > 0.001 &&
+        dets.any((d) => d.className.toLowerCase() == hi);
+
+    Rect rectOf(DetectionResult d) => Rect.fromLTWH(
       d.x * displayWidth + offsetX,
       d.y * displayHeight + offsetY,
       d.width * displayWidth,
       d.height * displayHeight,
     );
-    canvas.drawRect(r, boxP);
-    final lbl = d.className.cap;
-    final tp = TextPainter(
-      text: TextSpan(
-        text: lbl,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
+
+    if (hasHi) {
+      canvas.saveLayer(Offset.zero & size, Paint());
+      canvas.drawRect(
+        Offset.zero & size,
+        Paint()..color = Colors.black.withOpacity(0.68 * dim),
+      );
+      for (final d in dets) {
+        if (d.className.toLowerCase() != hi) continue;
+        canvas.drawRect(rectOf(d), Paint()..blendMode = BlendMode.clear);
+      }
+      canvas.restore();
+    }
+
+    for (int i = 0; i < dets.length; i++) {
+      final d = dets[i];
+      final isHi = hasHi && d.className.toLowerCase() == hi;
+      final isDim = hasHi && !isHi;
+
+      final base = _accent(d.className);
+      final color = isDim ? base.withOpacity(0.28) : base;
+      final r = rectOf(d);
+
+      final soloBoost = emphasiseSolo && dets.length == 1 ? 1.4 : 0.0;
+      final strokeW = isHi ? (3.6 + soloBoost) : (multi ? 2.6 : 2.8);
+
+      final boxP = Paint()
+        ..color = color
+        ..strokeWidth = strokeW
+        ..style = PaintingStyle.stroke;
+
+      if (isHi) {
+        canvas.drawRect(
+          r,
+          Paint()
+            ..color = base.withOpacity(0.5 * dim)
+            ..strokeWidth = strokeW + 7
+            ..style = PaintingStyle.stroke
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+        );
+        canvas.drawRect(
+          r,
+          Paint()
+            ..color = Colors.white.withOpacity(0.65 * dim)
+            ..strokeWidth = 1.3
+            ..style = PaintingStyle.stroke,
+        );
+      } else {
+        canvas.drawRect(
+          r,
+          Paint()
+            ..color = Colors.black.withOpacity(isDim ? 0.08 : 0.25)
+            ..strokeWidth = strokeW + 2
+            ..style = PaintingStyle.stroke,
+        );
+      }
+      canvas.drawRect(r, boxP);
+
+      final labelOpacity = isDim ? 0.22 : 1.0;
+      final lbl = multi ? '${i + 1}. ${d.className.cap}' : d.className.cap;
+
+      final tp = TextPainter(
+        text: TextSpan(
+          text: lbl,
+          style: TextStyle(
+            color: Colors.white.withOpacity(labelOpacity),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.3,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    const pad = 5.0;
-    final bgR = Rect.fromLTWH(
-      r.left,
-      math.max(0, r.top - tp.height - pad * 2),
-      tp.width + pad * 2,
-      tp.height + pad * 2,
-    );
-    canvas.drawRect(bgR, bgP);
-    tp.paint(canvas, Offset(bgR.left + pad, bgR.top + pad));
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      const chipRadius = 6.0;
+      const barW = 4.0;
+      const padTop = 5.0;
+      const padBottom = 5.0;
+      const textLeft = 12.0;
+      const padRight = 11.0;
+
+      final labelH = tp.height + padTop + padBottom;
+      final labelW = tp.width + textLeft + padRight;
+
+      final bool placeAbove = r.top - labelH - 2 >= 0;
+      final double labelTop = placeAbove
+          ? r.top - labelH - 2
+          : (r.bottom + 2).clamp(0.0, ch - labelH);
+
+      final double labelLeft = r.left.clamp(0.0, math.max(0.0, cw - labelW));
+
+      final bgR = Rect.fromLTWH(labelLeft, labelTop, labelW, labelH);
+      final labelR = RRect.fromRectAndRadius(
+        bgR,
+        const Radius.circular(chipRadius),
+      );
+
+      canvas.drawRRect(
+        labelR.shift(const Offset(0, 2)),
+        Paint()..color = Colors.black.withOpacity(0.32 * labelOpacity),
+      );
+
+      final chipTint = Color.lerp(const Color(0xFF0E141A), base, 0.14)!;
+      canvas.drawRRect(
+        labelR,
+        Paint()..color = chipTint.withOpacity(0.94 * labelOpacity),
+      );
+
+      canvas.save();
+      canvas.clipRRect(labelR);
+      canvas.drawRect(
+        Rect.fromLTWH(bgR.left, bgR.top, barW, bgR.height),
+        Paint()..color = base.withOpacity(0.95 * labelOpacity),
+      );
+      canvas.restore();
+
+      canvas.save();
+      canvas.clipRRect(labelR);
+      canvas.drawRect(
+        Rect.fromLTWH(bgR.left, bgR.top, bgR.width, 1.0),
+        Paint()..color = Colors.white.withOpacity(0.10 * labelOpacity),
+      );
+      canvas.restore();
+
+      tp.paint(canvas, Offset(bgR.left + textLeft, bgR.top + padTop));
+    }
   }
 
   @override
   bool shouldRepaint(_BBPainter o) =>
-      o.det != det ||
+      o.dets != dets ||
       o.imageWidth != imageWidth ||
-      o.imageHeight != imageHeight;
+      o.imageHeight != imageHeight ||
+      o.highlight != highlight ||
+      o.dim != dim ||
+      o.emphasiseSolo != emphasiseSolo;
 }
 
 class _ArcPainter extends CustomPainter {
@@ -1537,11 +1665,11 @@ class _ArcPainter extends CustomPainter {
     canvas.drawArc(
       Rect.fromLTWH(0, 0, size.width, size.height),
       -math.pi / 2,
-      math.pi * 1.5,
+      math.pi * 1.35,
       false,
       Paint()
         ..color = C.primaryMid
-        ..strokeWidth = 3.0
+        ..strokeWidth = 2.5
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,
     );
@@ -1551,67 +1679,105 @@ class _ArcPainter extends CustomPainter {
   bool shouldRepaint(_ArcPainter o) => false;
 }
 
-// ── Corner bracket painter (thicker stroke) ──────────────────────────────────
-class _FP extends CustomPainter {
-  final double op;
-  final bool busy;
-  const _FP(this.op, {this.busy = false});
+class _ScanFramePainter extends CustomPainter {
+  final double pulse;
+  const _ScanFramePainter({required this.pulse});
+
   @override
-  void paint(Canvas c, Size s) {
-    final color = busy
-        ? C.primaryMid.withOpacity(math.max(op, 0.85))
-        : C.primaryMid.withOpacity(op * 0.9 + 0.1);
-    final p = Paint()
-      ..color = color
-      ..strokeWidth =
-          4.0 // <-- made thicker
+  void paint(Canvas canvas, Size size) {
+    const pad = 26.0;
+    const cornerLen = 48.0;
+    const radius = 24.0;
+    const stroke = 5.0;
+
+    final rect = Rect.fromLTWH(
+      pad,
+      pad,
+      size.width - pad * 2,
+      size.height - pad * 2,
+    );
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(radius));
+
+    final dashPaint = Paint()
+      ..color = C.primaryMid.withOpacity(0.28)
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke;
+    _drawDashedRRect(canvas, rrect, dashPaint, 6, 6);
+
+    final accent = C.primaryMid;
+    final cornerPaint = Paint()
+      ..color = accent
+      ..strokeWidth = stroke
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    const pad = 24.0, l = 32.0; // slightly longer corners
-    for (final pts in [
-      [Offset(pad, pad + l), Offset(pad, pad), Offset(pad + l, pad)],
-      [
-        Offset(s.width - pad - l, pad),
-        Offset(s.width - pad, pad),
-        Offset(s.width - pad, pad + l),
-      ],
-    ]) {
-      c.drawPath(
-        Path()
-          ..moveTo(pts[0].dx, pts[0].dy)
-          ..lineTo(pts[1].dx, pts[1].dy)
-          ..lineTo(pts[2].dx, pts[2].dy),
-        p,
-      );
-    }
-    for (final pts in [
-      [
-        Offset(pad, s.height - pad - l),
-        Offset(pad, s.height - pad),
-        Offset(pad + l, s.height - pad),
-      ],
-      [
-        Offset(s.width - pad - l, s.height - pad),
-        Offset(s.width - pad, s.height - pad),
-        Offset(s.width - pad, s.height - pad - l),
-      ],
-    ]) {
-      c.drawPath(
-        Path()
-          ..moveTo(pts[0].dx, pts[0].dy)
-          ..lineTo(pts[1].dx, pts[1].dy)
-          ..lineTo(pts[2].dx, pts[2].dy),
-        p,
-      );
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final glowPaint = Paint()
+      ..color = accent.withOpacity(0.45 * (0.4 + pulse * 0.6))
+      ..strokeWidth = stroke + 6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+
+    final path = Path()
+      ..moveTo(rect.left, rect.top + cornerLen)
+      ..lineTo(rect.left, rect.top + radius)
+      ..arcToPoint(
+        Offset(rect.left + radius, rect.top),
+        radius: const Radius.circular(radius),
+      )
+      ..lineTo(rect.left + cornerLen, rect.top)
+      ..moveTo(rect.right - cornerLen, rect.top)
+      ..lineTo(rect.right - radius, rect.top)
+      ..arcToPoint(
+        Offset(rect.right, rect.top + radius),
+        radius: const Radius.circular(radius),
+      )
+      ..lineTo(rect.right, rect.top + cornerLen)
+      ..moveTo(rect.right, rect.bottom - cornerLen)
+      ..lineTo(rect.right, rect.bottom - radius)
+      ..arcToPoint(
+        Offset(rect.right - radius, rect.bottom),
+        radius: const Radius.circular(radius),
+      )
+      ..lineTo(rect.right - cornerLen, rect.bottom)
+      ..moveTo(rect.left + cornerLen, rect.bottom)
+      ..lineTo(rect.left + radius, rect.bottom)
+      ..arcToPoint(
+        Offset(rect.left, rect.bottom - radius),
+        radius: const Radius.circular(radius),
+      )
+      ..lineTo(rect.left, rect.bottom - cornerLen);
+
+    canvas.drawPath(path, glowPaint);
+    canvas.drawPath(path, cornerPaint);
+  }
+
+  void _drawDashedRRect(
+    Canvas canvas,
+    RRect rrect,
+    Paint paint,
+    double dashLen,
+    double gapLen,
+  ) {
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      double dist = 0;
+      while (dist < metric.length) {
+        final next = math.min(dist + dashLen, metric.length);
+        canvas.drawPath(metric.extractPath(dist, next), paint);
+        dist = next + gapLen;
+      }
     }
   }
 
   @override
-  bool shouldRepaint(_FP o) => o.op != op || o.busy != busy;
+  bool shouldRepaint(_ScanFramePainter o) => o.pulse != pulse;
 }
 
 // ============================================================================
-// UNIFIED DESIGN COMPONENTS
+// UNIFIED COMPONENTS
 // ============================================================================
 
 class _Card extends StatelessWidget {
@@ -1619,25 +1785,27 @@ class _Card extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final BorderRadius? radius;
   final Color? borderColor;
+  final Color? color;
   const _Card({
     required this.child,
     this.padding,
     this.radius,
     this.borderColor,
+    this.color,
   });
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: padding ?? const EdgeInsets.all(C.paddingCard),
     decoration: BoxDecoration(
-      color: C.surface,
+      color: color ?? C.surface,
       borderRadius: radius ?? BorderRadius.circular(C.radiusCard),
       border: Border.all(color: borderColor ?? C.border),
       boxShadow: const [
         BoxShadow(
-          color: Color(0x08000000),
-          blurRadius: 10,
-          offset: Offset(0, 3),
+          color: Color(0x0A000000),
+          blurRadius: 12,
+          offset: Offset(0, 4),
         ),
       ],
     ),
@@ -1681,9 +1849,9 @@ class _TappableCardState extends State<_TappableCard> {
           BoxShadow(
             color: _pressed
                 ? C.primary.withOpacity(0.1)
-                : const Color(0x08000000),
-            blurRadius: _pressed ? 12 : 8,
-            offset: const Offset(0, 3),
+                : const Color(0x0A000000),
+            blurRadius: _pressed ? 14 : 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1695,19 +1863,20 @@ class _TappableCardState extends State<_TappableCard> {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final Widget? trailing;
-  const _SectionHeader(this.title, {this.trailing});
+  final Color? accent;
+  const _SectionHeader(this.title, {this.trailing, this.accent});
   @override
   Widget build(BuildContext context) => Row(
     children: [
       Container(
         width: 3,
-        height: 15,
+        height: 16,
         decoration: BoxDecoration(
-          color: C.primary,
+          color: accent ?? C.primary,
           borderRadius: BorderRadius.circular(2),
         ),
       ),
-      const SizedBox(width: 8),
+      const SizedBox(width: 9),
       Expanded(child: Text(title, style: T.heading)),
       if (trailing != null) trailing!,
     ],
@@ -1742,8 +1911,9 @@ class _Pill extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: fg,
+            letterSpacing: 0.1,
           ),
         ),
       ],
@@ -1757,13 +1927,15 @@ Widget _bullet(String text, Color color) => Padding(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Container(
-        margin: const EdgeInsets.only(top: 6),
+        margin: const EdgeInsets.only(top: 7),
         width: 5,
         height: 5,
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
       const SizedBox(width: 10),
-      Expanded(child: Text(text, style: T.body)),
+      Expanded(
+        child: Text(text, style: T.body.copyWith(color: C.textPrimary)),
+      ),
     ],
   ),
 );
@@ -1787,8 +1959,8 @@ Widget _warnItem(String text, Color color, Color bg) => Padding(
         child: Text(
           text,
           style: TextStyle(
-            fontSize: 12,
-            color: color.withOpacity(0.87),
+            fontSize: 12.5,
+            color: color.withOpacity(0.92),
             height: 1.5,
           ),
         ),
@@ -1841,7 +2013,7 @@ class _CharRow extends StatelessWidget {
 }
 
 // ============================================================================
-// STAGGER ANIMATION
+// STAGGER
 // ============================================================================
 
 class _Stagger extends StatefulWidget {
@@ -1918,26 +2090,54 @@ class _ImageCarouselState extends State<_ImageCarousel> {
       ClipRRect(
         borderRadius: BorderRadius.circular(C.radiusCard),
         child: SizedBox(
-          height: 220,
+          height: 240,
           width: double.infinity,
-          child: PageView.builder(
-            controller: _pc,
-            itemCount: widget.imagePaths.length,
-            onPageChanged: (i) => setState(() => _current = i),
-            itemBuilder: (_, i) => Image.asset(
-              widget.imagePaths[i],
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: C.bg,
-                child: const Center(
-                  child: Icon(
-                    Icons.image_not_supported,
-                    size: 48,
-                    color: C.textMuted,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              PageView.builder(
+                controller: _pc,
+                itemCount: widget.imagePaths.length,
+                onPageChanged: (i) => setState(() => _current = i),
+                itemBuilder: (_, i) => Image.asset(
+                  widget.imagePaths[i],
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: C.bg,
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 48,
+                        color: C.textMuted,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+              Positioned(
+                bottom: 10,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(widget.imagePaths.length, (i) {
+                    final active = i == _current;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: active ? 18 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1957,26 +2157,38 @@ class _AnalyzingOverlay extends StatefulWidget {
 
 class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
     with TickerProviderStateMixin {
-  late AnimationController _spinCtrl, _pulseCtrl;
+  late AnimationController _spinCtrl;
+  late AnimationController _pulseCtrl;
+  late AnimationController _fadeInCtrl;
   late Animation<double> _pulseAnim;
+  late Animation<double> _fadeIn;
+
   int _dotCount = 0;
   Timer? _dotTimer;
+
   @override
   void initState() {
     super.initState();
     _spinCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1800),
     )..repeat();
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+    _fadeInCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    )..forward();
+
     _pulseAnim = Tween<double>(
-      begin: 0.75,
-      end: 1.0,
+      begin: 0.9,
+      end: 1.1,
     ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
-    _dotTimer = Timer.periodic(const Duration(milliseconds: 480), (_) {
+    _fadeIn = CurvedAnimation(parent: _fadeInCtrl, curve: Curves.easeOut);
+
+    _dotTimer = Timer.periodic(const Duration(milliseconds: 420), (_) {
       if (mounted) setState(() => _dotCount = (_dotCount + 1) % 4);
     });
   }
@@ -1985,110 +2197,127 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
   void dispose() {
     _spinCtrl.dispose();
     _pulseCtrl.dispose();
+    _fadeInCtrl.dispose();
     _dotTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => Positioned.fill(
-    child: Container(
-      color: C.camOverlayDark.withOpacity(0.88),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedBuilder(
-            animation: _pulseAnim,
-            builder: (_, child) =>
-                Transform.scale(scale: _pulseAnim.value, child: child),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: C.primaryMid.withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 64,
-                  height: 64,
-                  child: AnimatedBuilder(
-                    animation: _spinCtrl,
-                    builder: (_, __) => Transform.rotate(
-                      angle: _spinCtrl.value * 2 * math.pi,
-                      child: CustomPaint(painter: _ArcPainter()),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: const AlwaysStoppedAnimation(C.primaryMid),
-                    backgroundColor: C.primaryMid.withOpacity(0.18),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 28),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
+    child: FadeTransition(
+      opacity: _fadeIn,
+      child: Container(
+        color: Colors.black.withOpacity(0.85),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'Analyzing',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
+              // Modern dual-ring loading animation
+              AnimatedBuilder(
+                animation: _pulseAnim,
+                builder: (_, child) =>
+                    Transform.scale(scale: _pulseAnim.value, child: child),
+                child: SizedBox(
+                  width: 80,
+                  height: 80,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Outer ring
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: C.primaryMid.withOpacity(0.15),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      // Rotating ring
+                      AnimatedBuilder(
+                        animation: _spinCtrl,
+                        builder: (_, __) => Transform.rotate(
+                          angle: _spinCtrl.value * 2 * math.pi,
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: C.primaryMid,
+                                width: 3,
+                                strokeAlign: BorderSide.strokeAlignOutside,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Center glowing dot
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: C.primaryMid,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: C.primaryMid.withOpacity(0.8),
+                              blurRadius: 15,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              SizedBox(
-                width: 28,
-                child: Text(
-                  '.' * _dotCount,
-                  style: const TextStyle(
-                    color: C.primaryMid,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5,
-                  ),
+              const SizedBox(height: 28),
+              // Better typography
+              const Text(
+                'Analyzing',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Identifying camote variety...',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 13,
+                  letterSpacing: 0.2,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Scanning the camote…',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.45),
-              fontSize: 12,
-            ),
-          ),
-        ],
+        ),
       ),
     ),
   );
 }
 
 // ============================================================================
-// APP BAR HELPER
+// APP BAR
 // ============================================================================
 
-PreferredSizeWidget _appBar(String title, {List<Widget>? actions}) => AppBar(
+PreferredSizeWidget _appBar(
+  String title, {
+  List<Widget>? actions,
+  Widget? leading,
+}) => AppBar(
   backgroundColor: C.surface,
   surfaceTintColor: C.surface,
   scrolledUnderElevation: 0.5,
   elevation: 0,
   shadowColor: C.border,
+  leading: leading,
+  titleSpacing: leading == null ? null : 0,
   title: Row(
     children: [
       Container(
@@ -2104,8 +2333,9 @@ PreferredSizeWidget _appBar(String title, {List<Widget>? actions}) => AppBar(
         title,
         style: const TextStyle(
           fontSize: 18,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           color: C.textPrimary,
+          letterSpacing: -0.3,
         ),
       ),
     ],
@@ -2131,6 +2361,12 @@ class DomaApp extends StatelessWidget {
       primarySwatch: Colors.green,
       scaffoldBackgroundColor: C.bg,
       fontFamily: 'Roboto',
+      scrollbarTheme: ScrollbarThemeData(
+        thumbColor: WidgetStateProperty.all(C.primary.withOpacity(0.55)),
+        trackColor: WidgetStateProperty.all(C.primary.withOpacity(0.08)),
+        radius: const Radius.circular(10),
+        thickness: WidgetStateProperty.all(6),
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: C.surface,
         foregroundColor: C.textPrimary,
@@ -2164,7 +2400,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 750),
     );
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
@@ -2191,57 +2427,68 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: C.surface,
-    body: Container(
-      color: C.surface,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ScaleTransition(
-              scale: _scale,
-              child: FadeTransition(
+    body: Stack(
+      children: [
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ScaleTransition(
+                scale: _scale,
+                child: FadeTransition(
+                  opacity: _fade,
+                  child: const Icon(Icons.eco, color: C.primary, size: 72),
+                ),
+              ),
+              const SizedBox(height: 8),
+              FadeTransition(
                 opacity: _fade,
-                child: const Icon(Icons.eco, color: C.primary, size: 76),
-              ),
-            ),
-            const SizedBox(height: 12),
-            FadeTransition(
-              opacity: _fade,
-              child: const Text(
-                'Doma App',
-                style: TextStyle(
-                  color: C.primary,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
+                child: const Text(
+                  'Doma App',
+                  style: TextStyle(
+                    color: C.primary,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-            FadeTransition(
-              opacity: _fade,
-              child: Text(
-                'Camote Classifier App',
-                style: TextStyle(
-                  color: C.primary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.2,
+              const SizedBox(height: 2),
+              FadeTransition(
+                opacity: _fade,
+                child: Text(
+                  'Camote Classifier',
+                  style: TextStyle(
+                    color: C.primary.withOpacity(0.7),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.4,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 48),
-            SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.4,
-                color: C.primary,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 64,
+          child: FadeTransition(
+            opacity: _fade,
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: C.primary.withOpacity(0.85),
+                  backgroundColor: C.primary.withOpacity(0.12),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -2309,10 +2556,13 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _idx = 0;
+  bool _focusMode = false;
+
   final _cls = CamoteClassifier();
   DetectionLog? _last;
   final _rKey = GlobalKey<_ResultsPageState>();
   final _hKey = GlobalKey<_DetectionsPageState>();
+
   @override
   void initState() {
     super.initState();
@@ -2331,27 +2581,56 @@ class _MainNavigationState extends State<MainNavigation> {
     setState(() {
       _last = log;
       _idx = 1;
+      _focusMode = true;
     });
     _rKey.currentState?.update(log);
+  }
+
+  void _onSaved(DetectionLog log) {
     _hKey.currentState?.add(log);
   }
 
+  void _exitFocus() {
+    if (!_focusMode) return;
+    setState(() {
+      _focusMode = false;
+      _idx = 0;
+    });
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: IndexedStack(
-      index: _idx,
-      children: [
-        ScanPage(classifier: _cls, onResult: _onResult, cameras: _cameras),
-        ResultsPage(key: _rKey, result: _last),
-        DetectionsPage(key: _hKey),
-        const LibraryPage(),
-      ],
-    ),
-    bottomNavigationBar: _BottomNav(
-      currentIndex: _idx,
-      onTap: (i) => setState(() => _idx = i),
-    ),
-  );
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_focusMode,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        if (_focusMode) _exitFocus();
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: _idx,
+          children: [
+            ScanPage(classifier: _cls, onResult: _onResult, cameras: _cameras),
+            ResultsPage(
+              key: _rKey,
+              result: _last,
+              onSaved: _onSaved,
+              focusMode: _focusMode,
+              onExitFocus: _exitFocus,
+            ),
+            DetectionsPage(key: _hKey),
+            const LibraryPage(),
+          ],
+        ),
+        bottomNavigationBar: _focusMode
+            ? null
+            : _BottomNav(
+                currentIndex: _idx,
+                onTap: (i) => setState(() => _idx = i),
+              ),
+      ),
+    );
+  }
 }
 
 // ============================================================================
@@ -2362,12 +2641,14 @@ class _BottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   const _BottomNav({required this.currentIndex, required this.onTap});
+
   static const _items = [
-    (Icons.camera_alt_outlined, Icons.camera_alt, 'Scan'),
-    (Icons.analytics_outlined, Icons.analytics, 'Results'),
-    (Icons.history_outlined, Icons.history, 'Detections'),
-    (Icons.photo_library_outlined, Icons.photo_library, 'Library'),
+    (Icons.camera_alt_outlined, Icons.camera_alt_rounded, 'Scan'),
+    (Icons.analytics_outlined, Icons.analytics_rounded, 'Results'),
+    (Icons.history_outlined, Icons.history_rounded, 'Detections'),
+    (Icons.photo_library_outlined, Icons.photo_library_rounded, 'Library'),
   ];
+
   @override
   Widget build(BuildContext context) => Container(
     decoration: const BoxDecoration(
@@ -2376,7 +2657,7 @@ class _BottomNav extends StatelessWidget {
     ),
     child: SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: List.generate(_items.length, (i) {
@@ -2386,15 +2667,30 @@ class _BottomNav extends StatelessWidget {
               onTap: () => onTap(i),
               behavior: HitTestBehavior.opaque,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
+                duration: const Duration(milliseconds: 240),
                 curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 8,
+                  vertical: 7,
                 ),
                 decoration: BoxDecoration(
                   color: sel ? C.primaryLight : Colors.transparent,
-                  borderRadius: BorderRadius.circular(C.radiusPill),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: sel
+                        ? C.primary.withOpacity(0.22)
+                        : Colors.transparent,
+                    width: 1,
+                  ),
+                  boxShadow: sel
+                      ? [
+                          BoxShadow(
+                            color: C.primary.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -2408,9 +2704,10 @@ class _BottomNav extends StatelessWidget {
                     Text(
                       item.$3,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 10.5,
                         fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
                         color: sel ? C.primary : C.textMuted,
+                        letterSpacing: 0.1,
                       ),
                     ),
                   ],
@@ -2451,21 +2748,19 @@ class _ScanPageState extends State<ScanPage>
   bool _camReady = false;
   String? _camErr;
   bool _usingFront = false;
-  late AnimationController _cornerCtrl;
-  late Animation<double> _cornerAnim;
+
+  late AnimationController _frameCtrl;
+  late Animation<double> _frameAnim;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _cornerCtrl = AnimationController(
+    _frameCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
-    _cornerAnim = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _cornerCtrl, curve: Curves.easeInOut));
+    _frameAnim = CurvedAnimation(parent: _frameCtrl, curve: Curves.easeInOut);
     _initCam();
   }
 
@@ -2473,7 +2768,7 @@ class _ScanPageState extends State<ScanPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _cam?.dispose();
-    _cornerCtrl.dispose();
+    _frameCtrl.dispose();
     super.dispose();
   }
 
@@ -2483,8 +2778,9 @@ class _ScanPageState extends State<ScanPage>
     if (s == AppLifecycleState.inactive) {
       _cam!.dispose();
       if (mounted) setState(() => _camReady = false);
-    } else if (s == AppLifecycleState.resumed)
+    } else if (s == AppLifecycleState.resumed) {
       _initCam();
+    }
   }
 
   Future<void> _initCam() async {
@@ -2570,29 +2866,21 @@ class _ScanPageState extends State<ScanPage>
       final result = await widget.classifier.detect(file);
       if (!mounted) return;
       setState(() => _busy = false);
-      switch (result.state) {
-        case _ScanState.notFound:
-          if (mounted) _showDlg(const _NoCamoteDlg());
-          return;
-        case _ScanState.multipleVariants:
-          if (mounted) _showDlg(const _MultipleVariantsDlg());
-          return;
-        case _ScanState.ok:
-          break;
+
+      if (result.state == _ScanState.notFound || result.detections.isEmpty) {
+        if (mounted) _showDlg(const _NoCamoteDlg());
+        return;
       }
+
       final dir = await getApplicationDocumentsDirectory();
       final path =
           '${dir.path}/camote_${DateTime.now().millisecondsSinceEpoch}.jpg';
       await file.copy(path);
-      final winner = result.winner;
-      if (winner == null) {
-        if (mounted) _showDlg(const _NoCamoteDlg());
-        return;
-      }
+
       final log = DetectionLog(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         imagePath: path,
-        results: [winner],
+        results: result.detections,
         timestamp: DateTime.now(),
       );
       widget.onResult(log);
@@ -2609,34 +2897,57 @@ class _ScanPageState extends State<ScanPage>
       showDialog(context: context, builder: (_) => dlg);
 
   Widget _camView() {
-    if (_camErr != null)
+    if (_camErr != null) {
       return Container(
-        color: const Color(0xFF0D1F17),
+        color: C.primaryDeep,
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.no_photography_outlined,
-                color: Colors.white38,
-                size: 48,
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  child: const Icon(
+                    Icons.no_photography_outlined,
+                    color: Colors.white70,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Camera Unavailable',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
                   _camErr!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 12.5,
+                    height: 1.5,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
-    if (!_camReady || _cam == null)
+    }
+    if (!_camReady || _cam == null) {
       return Container(
-        color: const Color(0xFF0D1F17),
+        color: C.primaryDeep,
         child: const Center(
           child: CircularProgressIndicator(
             color: C.primaryMid,
@@ -2644,10 +2955,11 @@ class _ScanPageState extends State<ScanPage>
           ),
         ),
       );
+    }
     final preview = _cam!.value.previewSize;
-    if (preview == null)
+    if (preview == null) {
       return Container(
-        color: const Color(0xFF0D1F17),
+        color: C.primaryDeep,
         child: const Center(
           child: CircularProgressIndicator(
             color: C.primaryMid,
@@ -2655,6 +2967,7 @@ class _ScanPageState extends State<ScanPage>
           ),
         ),
       );
+    }
     return OverflowBox(
       alignment: Alignment.center,
       child: FittedBox(
@@ -2670,9 +2983,8 @@ class _ScanPageState extends State<ScanPage>
 
   @override
   Widget build(BuildContext context) {
-    final screenH = MediaQuery.of(context).size.height;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: C.primaryDeep,
       appBar: _appBar(
         'Scan',
         actions: [
@@ -2700,81 +3012,192 @@ class _ScanPageState extends State<ScanPage>
                   Image.file(_previewFile!, fit: BoxFit.cover)
                 else
                   _camView(),
-                // ── Removed horizontal scanning line ──
-                if (!_busy)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 160,
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.55),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 220,
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.65),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (!_busy && _camReady && _camErr == null)
                   AnimatedBuilder(
-                    animation: _cornerAnim,
+                    animation: _frameAnim,
                     builder: (_, __) => Positioned.fill(
-                      child: CustomPaint(painter: _FP(_cornerAnim.value)),
+                      child: CustomPaint(
+                        painter: _ScanFramePainter(pulse: _frameAnim.value),
+                      ),
+                    ),
+                  ),
+                if (!_busy && _camReady && _camErr == null)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 220,
+                    child: IgnorePointer(
+                      child: Center(
+                        child: Text(
+                          'Fit the camote inside the frame',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.75),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.3,
+                            shadows: const [
+                              Shadow(color: Colors.black54, blurRadius: 6),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 if (_busy) const _AnalyzingOverlay(),
               ],
             ),
           ),
-          Container(
-            color: C.bg,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _ActionBtn(
-                  icon: Icons.photo_library_outlined,
-                  label: 'Gallery',
-                  onTap: _busy ? null : _gallery,
-                  busy: _busy,
-                ),
-                GestureDetector(
-                  onTap: _busy ? null : _capture,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 140),
-                    width: 78,
-                    height: 78,
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _busy ? C.primaryDark : C.primary,
-                        width: 3.5,
+          _buildActionBar(),
+        ],
+      ),
+    );
+  }
+
+  // ── Action bar with white/gray background ──
+  Widget _buildActionBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+      decoration: BoxDecoration(
+        color: C.surface, // White background
+        border: Border(top: BorderSide(color: C.border, width: 1)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _ScanAction(
+              icon: Icons.photo_library_outlined,
+              label: 'Gallery',
+              onTap: _busy ? null : _gallery,
+            ),
+            _CaptureButton(busy: _busy, onTap: _busy ? null : _capture),
+            _ScanAction(
+              icon: Icons.flip_camera_ios_outlined,
+              label: 'Flip',
+              onTap: _busy || widget.cameras.length < 2 ? null : _switchCam,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Scan action button (gallery / flip) ─────────────────────────────────────
+class _ScanAction extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  const _ScanAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  @override
+  State<_ScanAction> createState() => _ScanActionState();
+}
+
+class _ScanActionState extends State<_ScanAction> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    final disabled = widget.onTap == null;
+    return GestureDetector(
+      onTapDown: disabled ? null : (_) => setState(() => _pressed = true),
+      onTapUp: disabled
+          ? null
+          : (_) {
+              setState(() => _pressed = false);
+              widget.onTap?.call();
+            },
+      onTapCancel: disabled ? null : () => setState(() => _pressed = false),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: _pressed
+                  ? C.primary.withOpacity(0.1)
+                  : C.bg, // Light gray background
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: _pressed ? C.primary : C.borderMid,
+                width: 1.4,
+              ),
+              boxShadow: _pressed
+                  ? [
+                      BoxShadow(
+                        color: C.primary.withOpacity(0.15),
+                        blurRadius: 10,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: C.primary.withOpacity(_busy ? 0.06 : 0.22),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: _busy
-                          ? SizedBox(
-                              width: 28,
-                              height: 28,
-                              child: CircularProgressIndicator(
-                                color: C.primary,
-                                strokeWidth: 2.5,
-                                backgroundColor: C.primary.withOpacity(0.2),
-                              ),
-                            )
-                          : Container(
-                              width: 58,
-                              height: 58,
-                              decoration: const BoxDecoration(
-                                color: C.primary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-                _ActionBtn(
-                  icon: Icons.flip_camera_ios_outlined,
-                  label: 'Flip',
-                  onTap: _busy ? null : _switchCam,
-                  busy: _busy,
-                ),
-              ],
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+            ),
+            child: Icon(
+              widget.icon,
+              size: 23,
+              color: disabled ? C.textMuted : C.primaryDark,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+              color: disabled ? C.textMuted : C.textPrimary,
             ),
           ),
         ],
@@ -2783,61 +3206,88 @@ class _ScanPageState extends State<ScanPage>
   }
 }
 
-class _ActionBtn extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
+// ── Big capture button with glow ring ───────────────────────────────────────
+class _CaptureButton extends StatefulWidget {
   final bool busy;
-  const _ActionBtn({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    required this.busy,
-  });
+  final VoidCallback? onTap;
+  const _CaptureButton({required this.busy, required this.onTap});
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: busy ? C.border : C.surface,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: busy ? C.border : C.borderMid,
-              width: 1.5,
+  State<_CaptureButton> createState() => _CaptureButtonState();
+}
+
+class _CaptureButtonState extends State<_CaptureButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: widget.busy ? null : (_) => setState(() => _pressed = true),
+      onTapUp: widget.busy
+          ? null
+          : (_) {
+              setState(() => _pressed = false);
+              widget.onTap?.call();
+            },
+      onTapCancel: widget.busy ? null : () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 84,
+        height: 84,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: _pressed ? C.primaryMid : C.primary,
+            width: 3.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: C.primary.withOpacity(_pressed ? 0.5 : 0.25),
+              blurRadius: _pressed ? 24 : 15,
+              spreadRadius: _pressed ? 2 : 0,
             ),
-            boxShadow: busy
-                ? []
-                : [
-                    const BoxShadow(
-                      color: Color(0x0F000000),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
+          ],
+        ),
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: _pressed ? 58 : 66,
+            height: _pressed ? 58 : 66,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [C.primaryMid, C.primary, C.primaryDark],
+              ),
+            ),
+            child: widget.busy
+                ? Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.6,
+                        backgroundColor: Colors.white.withOpacity(0.25),
+                      ),
                     ),
-                  ],
-          ),
-          child: Icon(icon, size: 22, color: busy ? C.textMuted : C.textSec),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-            color: busy ? C.textMuted : C.textSec,
+                  )
+                : const Center(
+                    child: Icon(
+                      Icons.camera_alt_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
           ),
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 // ============================================================================
-// SHARED DIALOG SHELL
+// DIALOGS
 // ============================================================================
 
 class _WhiteDlg extends StatelessWidget {
@@ -2846,7 +3296,7 @@ class _WhiteDlg extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Dialog(
     backgroundColor: C.surface,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
     insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
     child: child,
   );
@@ -2865,18 +3315,14 @@ Widget _dlgBtn(
       foregroundColor: C.white,
       padding: const EdgeInsets.symmetric(vertical: 14),
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(C.radiusInner),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
     child: Text(
       label,
-      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
     ),
   ),
 );
-
-// ── Dialog widgets ────────────────────────────────────────────────────────────
 
 class _NoCamoteDlg extends StatelessWidget {
   const _NoCamoteDlg();
@@ -2888,14 +3334,14 @@ class _NoCamoteDlg extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: C.errLight,
-              borderRadius: BorderRadius.circular(14),
+              shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.search_off_rounded, color: C.err, size: 28),
+            child: const Icon(Icons.search_off_rounded, color: C.err, size: 32),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Text('No Camote Detected', style: T.title),
           const SizedBox(height: 8),
           Text(
@@ -2903,48 +3349,7 @@ class _NoCamoteDlg extends StatelessWidget {
             textAlign: TextAlign.center,
             style: T.body,
           ),
-          const SizedBox(height: 22),
-          _dlgBtn('Try Again', onTap: () => Navigator.pop(context)),
-        ],
-      ),
-    ),
-  );
-}
-
-class _MultipleVariantsDlg extends StatelessWidget {
-  const _MultipleVariantsDlg();
-  @override
-  Widget build(BuildContext context) => _WhiteDlg(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: C.warnLight,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: C.warn,
-              size: 28,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Multiple Varieties Detected',
-            style: T.title,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Place only one camote in frame for an accurate scan.',
-            textAlign: TextAlign.center,
-            style: T.body,
-          ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
           _dlgBtn('Try Again', onTap: () => Navigator.pop(context)),
         ],
       ),
@@ -2958,7 +3363,7 @@ class _HowToDlg extends StatelessWidget {
   Widget build(BuildContext context) => _WhiteDlg(
     child: ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.72,
+        maxHeight: MediaQuery.of(context).size.height * 0.75,
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -2985,10 +3390,10 @@ class _HowToDlg extends StatelessWidget {
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: C.bg,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: C.border),
                     ),
                     child: const Icon(Icons.close, size: 16, color: C.textSec),
@@ -2996,15 +3401,15 @@ class _HowToDlg extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Flexible(
               child: SingleChildScrollView(
                 child: Column(
                   children: [
                     _step(
                       1,
-                      'Place one camote',
-                      'Centre it on a plain surface.',
+                      'Place one or more camote',
+                      'Keep them apart on a plain surface.',
                     ),
                     _step(
                       2,
@@ -3014,19 +3419,19 @@ class _HowToDlg extends StatelessWidget {
                     _step(
                       3,
                       'AI analysis',
-                      'The variety is identified automatically.',
+                      'Every camote is identified automatically.',
                     ),
                     _step(
                       4,
                       'View results',
-                      'See variety, nutrition, and recipes.',
+                      'Tap a camote or swipe to spotlight it.',
                     ),
                     _step(5, 'History & Library', 'Review past scans anytime.'),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             _dlgBtn('Got It', onTap: () => Navigator.pop(context)),
           ],
         ),
@@ -3034,13 +3439,13 @@ class _HowToDlg extends StatelessWidget {
     ),
   );
   Widget _step(int n, String t, String d) => Padding(
-    padding: const EdgeInsets.only(bottom: 14),
+    padding: const EdgeInsets.only(bottom: 16),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 26,
-          height: 26,
+          width: 28,
+          height: 28,
           decoration: const BoxDecoration(
             color: C.primary,
             shape: BoxShape.circle,
@@ -3050,13 +3455,13 @@ class _HowToDlg extends StatelessWidget {
               '$n',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3082,18 +3487,18 @@ class _AboutDlg extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: C.primaryLight,
-              borderRadius: BorderRadius.circular(16),
+              shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.eco, color: C.primary, size: 32),
+            child: const Icon(Icons.eco, color: C.primary, size: 36),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Text('Doma', style: T.display),
           Container(
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
             decoration: BoxDecoration(
               color: C.primaryLight,
               borderRadius: BorderRadius.circular(C.radiusPill),
@@ -3103,17 +3508,17 @@ class _AboutDlg extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 color: C.primary,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             'Identifies camote varieties grown in Tacloban City, Leyte.',
             textAlign: TextAlign.center,
             style: T.body,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           _dlgBtn('Close', onTap: () => Navigator.pop(context)),
         ],
       ),
@@ -3127,7 +3532,17 @@ class _AboutDlg extends StatelessWidget {
 
 class ResultsPage extends StatefulWidget {
   final DetectionLog? result;
-  const ResultsPage({super.key, this.result});
+  final ValueChanged<DetectionLog>? onSaved;
+  final bool focusMode;
+  final VoidCallback? onExitFocus;
+
+  const ResultsPage({
+    super.key,
+    this.result,
+    this.onSaved,
+    this.focusMode = false,
+    this.onExitFocus,
+  });
   @override
   State<ResultsPage> createState() => _ResultsPageState();
 }
@@ -3137,9 +3552,11 @@ class _ResultsPageState extends State<ResultsPage>
   DetectionLog? _r;
   bool _saved = false;
   double? _imageWidth, _imageHeight;
+  String? _selectedClass;
   late AnimationController _ctrl;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
+  final ScrollController _scroll = ScrollController();
 
   @override
   void initState() {
@@ -3163,6 +3580,7 @@ class _ResultsPageState extends State<ResultsPage>
   @override
   void dispose() {
     _ctrl.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -3174,6 +3592,7 @@ class _ResultsPageState extends State<ResultsPage>
         _r = widget.result;
         _saved = false;
         _imageWidth = _imageHeight = null;
+        _selectedClass = null;
       });
       _ctrl.forward(from: 0);
       if (_r != null) _loadImageDimensions();
@@ -3185,7 +3604,9 @@ class _ResultsPageState extends State<ResultsPage>
       _r = log;
       _saved = false;
       _imageWidth = _imageHeight = null;
+      _selectedClass = null;
     });
+    if (_scroll.hasClients) _scroll.jumpTo(0);
     _ctrl.forward(from: 0);
     _loadImageDimensions();
   }
@@ -3209,14 +3630,8 @@ class _ResultsPageState extends State<ResultsPage>
   Future<void> _saveDetection() async {
     if (_r == null || _saved) return;
     await DetectionLogger.save(_r!);
+    widget.onSaved?.call(_r!);
     setState(() => _saved = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Detection saved'),
-        backgroundColor: C.primary,
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   CamoteVariety? _v(String cls) {
@@ -3229,12 +3644,57 @@ class _ResultsPageState extends State<ResultsPage>
     }
   }
 
+  Widget? _backButton() => widget.focusMode
+      ? IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          color: C.textPrimary,
+          iconSize: 22,
+          tooltip: 'Back',
+          onPressed: () => widget.onExitFocus?.call(),
+        )
+      : null;
+
+  Widget _saveBar() => SafeArea(
+    top: false,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+      child: SizedBox(
+        width: double.infinity,
+        height: 54,
+        child: ElevatedButton.icon(
+          onPressed: _saved ? null : _saveDetection,
+          icon: Icon(
+            _saved ? Icons.check_circle_rounded : Icons.bookmark_add_outlined,
+            size: 20,
+          ),
+          label: Text(_saved ? 'Saved to Detections' : 'Save Detection'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: C.primary,
+            foregroundColor: C.white,
+            disabledBackgroundColor: C.primaryLight,
+            disabledForegroundColor: C.primary,
+            elevation: 6,
+            shadowColor: C.primary.withOpacity(0.35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
-    if (_r == null || _r!.results.isEmpty)
+    if (_r == null || _r!.results.isEmpty) {
       return Scaffold(
         backgroundColor: C.bg,
-        appBar: _appBar('Results'),
+        appBar: _appBar('Results', leading: _backButton()),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -3260,212 +3720,182 @@ class _ResultsPageState extends State<ResultsPage>
           ),
         ),
       );
+    }
 
-    final top = _r!.results.first;
+    final Map<String, List<DetectionResult>> grouped = {};
+    for (final d in _r!.results) {
+      grouped.putIfAbsent(d.className.toLowerCase(), () => []).add(d);
+    }
+    final uniqueClasses = grouped.keys.toList();
+    final totalCount = _r!.results.length;
+    final variantCount = uniqueClasses.length;
+
+    final selectedClass =
+        (_selectedClass != null && uniqueClasses.contains(_selectedClass))
+        ? _selectedClass!
+        : uniqueClasses.first;
+
+    final top = grouped[selectedClass]!.first;
     final variety = _v(top.className);
     final accentColor = _accent(top.className);
-    final accentLightColor = _accentLight(top.className);
+    final selectedCount = grouped[selectedClass]!.length;
 
     return Scaffold(
       backgroundColor: C.bg,
-      appBar: _appBar('Results'),
+      appBar: _appBar('Results', leading: _backButton()),
+      bottomNavigationBar: widget.focusMode ? _saveBar() : null,
       body: FadeTransition(
         opacity: _fade,
         child: SlideTransition(
           position: _slide,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 260,
-                  width: double.infinity,
-                  child: File(_r!.imagePath).existsSync()
-                      ? Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.file(
-                              File(_r!.imagePath),
-                              fit: BoxFit.contain,
-                              alignment: Alignment.center,
-                            ),
-                            CustomPaint(
-                              painter: _BBPainter(
-                                det: top,
-                                imageWidth: _imageWidth,
-                                imageHeight: _imageHeight,
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              child: Container(
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.transparent,
-                                      C.bg.withOpacity(0.97),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Container(
-                          color: C.bg,
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            size: 56,
-                            color: C.textMuted,
+          child: Scrollbar(
+            controller: _scroll,
+            thumbVisibility: true,
+            thickness: 6,
+            radius: const Radius.circular(10),
+            child: SingleChildScrollView(
+              controller: _scroll,
+              child: Column(
+                children: [
+                  _HeroImage(
+                    imagePath: _r!.imagePath,
+                    dets: _r!.results,
+                    imageWidth: _imageWidth,
+                    imageHeight: _imageHeight,
+                    totalCount: totalCount,
+                    variantCount: variantCount,
+                    classes: uniqueClasses,
+                    selectedClass: selectedClass,
+                    onSelect: (c) => setState(() => _selectedClass = c),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      C.paddingPage,
+                      C.paddingPage,
+                      C.paddingPage,
+                      28,
+                    ),
+                    child: Column(
+                      children: [
+                        _Stagger(
+                          index: 0,
+                          child: _DetectionSummaryCard(
+                            totalCount: totalCount,
+                            variantCount: variantCount,
                           ),
                         ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    C.paddingPage,
-                    0,
-                    C.paddingPage,
-                    28,
-                  ),
-                  child: Column(
-                    children: [
-                      _Stagger(
-                        index: 0,
-                        child: _IdentityCard(
-                          top: top,
-                          variety: variety,
-                          accentColor: accentColor,
-                          accentLightColor: accentLightColor,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      if (variety != null) ...[
+                        const SizedBox(height: 10),
                         _Stagger(
                           index: 1,
-                          child: _Card(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const _SectionHeader('Overview'),
-                                const SizedBox(height: 10),
-                                Text(variety.description, style: T.body),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _Stagger(
-                          index: 2,
-                          child: _Card(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const _SectionHeader('Characteristics'),
-                                const SizedBox(height: 4),
-                                const Divider(height: 1, color: C.border),
-                                _CharRow(
-                                  Icons.straighten,
-                                  'Shape',
-                                  variety.shape,
-                                ),
-                                const Divider(height: 1, color: C.border),
-                                _CharRow(
-                                  Icons.palette_outlined,
-                                  'Skin Color',
-                                  variety.skinColor,
-                                ),
-                                const Divider(height: 1, color: C.border),
-                                _CharRow(
-                                  Icons.circle_outlined,
-                                  'Flesh Color',
-                                  variety.fleshColor,
-                                ),
-                                const Divider(height: 1, color: C.border),
-                                _CharRow(
-                                  Icons.texture,
-                                  'Texture',
-                                  variety.texture,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _Stagger(
-                          index: 3,
-                          child: _IntakeCard(
-                            intake: variety.intake,
+                          child: _IdentityCard(
+                            top: top,
+                            variety: variety,
                             accentColor: accentColor,
+                            count: selectedCount,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        _Stagger(
-                          index: 4,
-                          child: _TargetedCard(
-                            people: variety.targetedPeople,
-                            accentColor: accentColor,
-                            accentLightColor: accentLightColor,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _Stagger(
-                          index: 5,
-                          child: _MedicalCard(
-                            medical: variety.medicalInfo,
-                            accentColor: accentColor,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _Stagger(
-                          index: 6,
-                          child: _RecipeRowCard(
-                            recipes: variety.recipes,
-                            accentColor: accentColor,
-                          ),
-                        ),
-                      ],
-                      _Stagger(
-                        index: 7,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 18),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _saved ? null : _saveDetection,
-                              icon: Icon(
-                                _saved ? Icons.check_circle : Icons.add,
-                              ),
-                              label: Text(_saved ? 'Saved' : 'Save Detection'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _saved
-                                    ? C.primaryLight
-                                    : C.primary,
-                                foregroundColor: _saved ? C.primary : C.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    C.radiusInner,
+                        if (variety != null) ...[
+                          _Stagger(
+                            index: 2,
+                            child: _Card(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _SectionHeader(
+                                    'Overview',
+                                    accent: accentColor,
                                   ),
-                                ),
-                                textStyle: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    variety.description,
+                                    style: T.body.copyWith(
+                                      color: C.textPrimary,
+                                      height: 1.6,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                    ],
+                          const SizedBox(height: 10),
+                          _Stagger(
+                            index: 3,
+                            child: _Card(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _SectionHeader(
+                                    'Characteristics',
+                                    accent: accentColor,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Divider(height: 1, color: C.border),
+                                  _CharRow(
+                                    Icons.straighten,
+                                    'Shape',
+                                    variety.shape,
+                                  ),
+                                  const Divider(height: 1, color: C.border),
+                                  _CharRow(
+                                    Icons.palette_outlined,
+                                    'Skin Color',
+                                    variety.skinColor,
+                                  ),
+                                  const Divider(height: 1, color: C.border),
+                                  _CharRow(
+                                    Icons.circle_outlined,
+                                    'Flesh Color',
+                                    variety.fleshColor,
+                                  ),
+                                  const Divider(height: 1, color: C.border),
+                                  _CharRow(
+                                    Icons.texture,
+                                    'Texture',
+                                    variety.texture,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _Stagger(
+                            index: 4,
+                            child: _IntakeCard(
+                              intake: variety.intake,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _Stagger(
+                            index: 5,
+                            child: _TargetedCard(
+                              people: variety.targetedPeople,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _Stagger(
+                            index: 6,
+                            child: _MedicalCard(
+                              medical: variety.medicalInfo,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _Stagger(
+                            index: 7,
+                            child: _RecipeRowCard(
+                              recipes: variety.recipes,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -3474,73 +3904,464 @@ class _ResultsPageState extends State<ResultsPage>
   }
 }
 
-// ── Identity card (no confidence bar) ────────────────────────────────────────
+// ── Hero image with TAP-TO-SELECT + swipe gesture + dots ────────────────────
+class _HeroImage extends StatefulWidget {
+  final String imagePath;
+  final List<DetectionResult> dets;
+  final double? imageWidth;
+  final double? imageHeight;
+  final int totalCount;
+  final int variantCount;
+  final List<String> classes;
+  final String? selectedClass;
+  final ValueChanged<String>? onSelect;
+
+  const _HeroImage({
+    required this.imagePath,
+    required this.dets,
+    this.imageWidth,
+    this.imageHeight,
+    this.totalCount = 1,
+    this.variantCount = 1,
+    this.classes = const [],
+    this.selectedClass,
+    this.onSelect,
+  });
+
+  @override
+  State<_HeroImage> createState() => _HeroImageState();
+}
+
+class _HeroImageState extends State<_HeroImage>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _dimCtrl;
+  late Animation<double> _dimAnim;
+
+  double _accumDx = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _dimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 340),
+    );
+    _dimAnim = CurvedAnimation(parent: _dimCtrl, curve: Curves.easeOutCubic);
+    if (widget.selectedClass != null) _dimCtrl.value = 1.0;
+  }
+
+  @override
+  void didUpdateWidget(_HeroImage old) {
+    super.didUpdateWidget(old);
+    final wasActive = old.selectedClass != null;
+    final isActive = widget.selectedClass != null;
+    if (!wasActive && isActive) {
+      _dimCtrl.forward();
+    } else if (wasActive && !isActive) {
+      _dimCtrl.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _dimCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onDragStart(DragStartDetails _) => _accumDx = 0;
+
+  void _onDragUpdate(DragUpdateDetails d) => _accumDx += d.delta.dx;
+
+  void _onDragEnd(DragEndDetails d) {
+    if (widget.classes.length < 2) return;
+    final v = d.primaryVelocity ?? 0;
+    final fastSwipe = v.abs() > 180;
+    final longDrag = _accumDx.abs() > 40;
+    if (!fastSwipe && !longDrag) return;
+
+    final forward = fastSwipe ? v < 0 : _accumDx < 0;
+    final idx = widget.classes.indexOf(widget.selectedClass ?? '');
+    if (idx < 0) return;
+    final len = widget.classes.length;
+    final next = forward ? (idx + 1) % len : (idx - 1 + len) % len;
+    widget.onSelect?.call(widget.classes[next]);
+  }
+
+  /// Convert a tap position (local to the hero widget) into a variety
+  /// selection by hit-testing the detection boxes in display space.
+  void _handleTap(Offset local, double cw, double ch) {
+    if (widget.dets.isEmpty) return;
+    final iw = widget.imageWidth ?? 1.0;
+    final ih = widget.imageHeight ?? 1.0;
+    final scale = math.max(cw / iw, ch / ih);
+    final displayWidth = iw * scale;
+    final displayHeight = ih * scale;
+    final offsetX = (cw - displayWidth) / 2;
+    final offsetY = (ch - displayHeight) / 2;
+
+    // Iterate topmost first so the most recently drawn box wins.
+    for (int i = widget.dets.length - 1; i >= 0; i--) {
+      final d = widget.dets[i];
+      final rect = Rect.fromLTWH(
+        d.x * displayWidth + offsetX,
+        d.y * displayHeight + offsetY,
+        d.width * displayWidth,
+        d.height * displayHeight,
+      );
+      // Add slop for easier tapping.
+      if (rect.inflate(10).contains(local)) {
+        final cls = d.className.toLowerCase();
+        if (cls != widget.selectedClass) {
+          HapticFeedback.selectionClick();
+          widget.onSelect?.call(cls);
+        }
+        return;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final file = File(widget.imagePath);
+    if (!file.existsSync()) {
+      return Container(
+        height: 260,
+        color: C.bg,
+        child: const Icon(
+          Icons.image_not_supported,
+          size: 56,
+          color: C.textMuted,
+        ),
+      );
+    }
+
+    final hasDims = widget.imageWidth != null && widget.imageHeight != null;
+    final aspect = hasDims
+        ? (widget.imageWidth! / widget.imageHeight!).clamp(0.6, 1.6)
+        : 4.0 / 3.0;
+
+    final String badgeText;
+    final IconData badgeIcon;
+    final Color badgeDot;
+    if (widget.variantCount > 1) {
+      badgeText = '${widget.variantCount} Variants Detected';
+      badgeIcon = Icons.auto_awesome;
+      badgeDot = const Color(0xFFDE9F00);
+    } else if (widget.totalCount > 1) {
+      badgeText = '${widget.totalCount} Camotes Detected';
+      badgeIcon = Icons.check_circle;
+      badgeDot = C.primaryMid;
+    } else {
+      badgeText = '1 Camote Detected';
+      badgeIcon = Icons.check_circle;
+      badgeDot = C.primaryMid;
+    }
+
+    final showSwipeUi = widget.classes.length > 1;
+    final currentIdx = widget.classes.indexOf(widget.selectedClass ?? '');
+
+    return Column(
+      children: [
+        // ── LayoutBuilder gives us the render size for tap hit-testing ──
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cw = constraints.maxWidth;
+            final ch = cw / aspect;
+            return SizedBox(
+              width: cw,
+              height: ch,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (d) => _handleTap(d.localPosition, cw, ch),
+                onHorizontalDragStart: showSwipeUi ? _onDragStart : null,
+                onHorizontalDragUpdate: showSwipeUi ? _onDragUpdate : null,
+                onHorizontalDragEnd: showSwipeUi ? _onDragEnd : null,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(
+                      file,
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                      filterQuality: FilterQuality.medium,
+                    ),
+                    AnimatedBuilder(
+                      animation: _dimAnim,
+                      builder: (_, __) => CustomPaint(
+                        painter: _BBPainter(
+                          dets: widget.dets,
+                          imageWidth: widget.imageWidth,
+                          imageHeight: widget.imageHeight,
+                          highlight: widget.selectedClass,
+                          dim: _dimAnim.value,
+                          emphasiseSolo: widget.dets.length == 1,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 14,
+                      left: 14,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 260),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(
+                            widget.selectedClass != null ? 0.85 : 0.72,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.14),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.25),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: badgeDot,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                badgeIcon,
+                                size: 11,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              badgeText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.15,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        if (showSwipeUi) ...[
+          const SizedBox(height: 14),
+          _Dots(
+            current: currentIdx < 0 ? 0 : currentIdx,
+            classes: widget.classes,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Dots indicator ───────────────────────────────────────────────────────────
+class _Dots extends StatelessWidget {
+  final int current;
+  final List<String> classes;
+  const _Dots({required this.current, required this.classes});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: classes.asMap().entries.map((e) {
+      final active = e.key == current;
+      final color = _accent(e.value);
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        width: active ? 24 : 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: active ? color : C.border,
+          borderRadius: BorderRadius.circular(4),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+      );
+    }).toList(),
+  );
+}
+
+// ── Summary card ─────────────────────────────────────────────────────────────
+class _DetectionSummaryCard extends StatelessWidget {
+  final int totalCount;
+  final int variantCount;
+  const _DetectionSummaryCard({
+    required this.totalCount,
+    required this.variantCount,
+  });
+
+  @override
+  Widget build(BuildContext context) => _Card(
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [C.primaryMid, C.primary],
+            ),
+            borderRadius: BorderRadius.circular(11),
+            boxShadow: [
+              BoxShadow(
+                color: C.primary.withOpacity(0.28),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.center_focus_strong_outlined,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$totalCount Camote${totalCount == 1 ? "" : "s"} Detected',
+                style: T.title,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                variantCount > 1
+                    ? '$variantCount varieties found'
+                    : 'Analysis complete',
+                style: T.caption,
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ── Identity card ────────────────────────────────────────────────────────────
 class _IdentityCard extends StatelessWidget {
   final DetectionResult top;
   final CamoteVariety? variety;
-  final Color accentColor, accentLightColor;
+  final Color accentColor;
+  final int count;
   const _IdentityCard({
     required this.top,
     required this.variety,
     required this.accentColor,
-    required this.accentLightColor,
+    this.count = 1,
   });
   @override
   Widget build(BuildContext context) => _Card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    child: Row(
       children: [
-        Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: accentColor,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: accentColor.withOpacity(0.28),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
+        Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                accentColor,
+                Color.lerp(accentColor, Colors.black, 0.25)!,
+              ],
+            ),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: accentColor.withOpacity(0.32),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(variety?.name ?? top.className.cap, style: T.display),
+              if (variety != null)
+                Text(
+                  variety!.commonName,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: accentColor,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.05,
                   ),
-                ],
-              ),
-              child: const SizedBox.shrink(),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(variety?.name ?? top.className.cap, style: T.display),
-                  if (variety != null)
-                    Text(
-                      variety!.commonName,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: accentColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+                ),
+            ],
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: accentLightColor,
+                color: accentColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(C.radiusPill),
               ),
-              child: Text(
-                'Detected',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: accentColor,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle, size: 12, color: accentColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Detected',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: accentColor,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                ],
               ),
             ),
+            if (count > 1) ...[
+              const SizedBox(height: 6),
+              Text(
+                '$count instances',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: accentColor.withOpacity(0.85),
+                ),
+              ),
+            ],
           ],
         ),
       ],
@@ -3548,7 +4369,7 @@ class _IdentityCard extends StatelessWidget {
   );
 }
 
-// ── Intake card ───────────────────────────────────────────────────────────────
+// ── Intake card ──────────────────────────────────────────────────────────────
 class _IntakeCard extends StatelessWidget {
   final IntakeGuideline intake;
   final Color accentColor;
@@ -3560,6 +4381,7 @@ class _IntakeCard extends StatelessWidget {
       children: [
         _SectionHeader(
           'Daily Intake',
+          accent: accentColor,
           trailing: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
@@ -3663,7 +4485,7 @@ class _IntakeCard extends StatelessWidget {
             Text(
               value,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: C.textPrimary,
                 height: 1.35,
@@ -3676,36 +4498,49 @@ class _IntakeCard extends StatelessWidget {
       );
 }
 
-// ── Targeted people card – no bubbles, clean list ──────────────────────────
+// ── Targeted people card ─────────────────────────────────────────────────────
 class _TargetedCard extends StatelessWidget {
   final List<String> people;
-  final Color accentColor, accentLightColor;
-  const _TargetedCard({
-    required this.people,
-    required this.accentColor,
-    required this.accentLightColor,
-  });
+  final Color accentColor;
+  const _TargetedCard({required this.people, required this.accentColor});
   @override
   Widget build(BuildContext context) => _Card(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader('Best Suited For'),
+        _SectionHeader('Best Suited For', accent: accentColor),
         const SizedBox(height: 12),
-        ...people.map(
-          (p) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+        ...people.asMap().entries.map(
+          (e) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.person_outline, size: 16, color: accentColor),
+                Container(
+                  width: 24,
+                  height: 24,
+                  margin: const EdgeInsets.only(top: 2),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.person_outline,
+                      size: 13,
+                      color: accentColor,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    p,
-                    style: TextStyle(
+                    e.value,
+                    style: const TextStyle(
                       fontSize: 13,
-                      color: accentColor,
+                      color: C.textPrimary,
                       fontWeight: FontWeight.w500,
+                      height: 1.5,
                     ),
                   ),
                 ),
@@ -3718,7 +4553,7 @@ class _TargetedCard extends StatelessWidget {
   );
 }
 
-// ── Medical card ──────────────────────────────────────────────────────────────
+// ── Medical card ─────────────────────────────────────────────────────────────
 class _MedicalCard extends StatelessWidget {
   final MedicalInfo medical;
   final Color accentColor;
@@ -3730,6 +4565,7 @@ class _MedicalCard extends StatelessWidget {
       children: [
         _SectionHeader(
           'Nutrition & Medical',
+          accent: accentColor,
           trailing: Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
@@ -3760,12 +4596,12 @@ class _MedicalCard extends StatelessWidget {
             _nutBadge('Vitamin C', medical.vitaminC, Icons.eco_outlined),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         _infoRow('Glycemic Index', medical.glycemicIndex),
         _infoRow('Glycemic Load', medical.glycemicLoad),
         const SizedBox(height: 10),
         const Divider(height: 1, color: C.border),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Text('Medicinal Uses', style: T.subhead.copyWith(color: C.primary)),
         const SizedBox(height: 6),
         ...medical.medicinalUses.map((u) => _bullet(u, C.primary)),
@@ -3811,7 +4647,7 @@ class _MedicalCard extends StatelessWidget {
             Text(
               value,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: C.primary,
               ),
@@ -3828,13 +4664,13 @@ class _MedicalCard extends StatelessWidget {
       children: [
         Text('$label:', style: T.label),
         const SizedBox(width: 6),
-        Text(value, style: T.subhead),
+        Expanded(child: Text(value, style: T.subhead)),
       ],
     ),
   );
 }
 
-// ── Recipe row card ───────────────────────────────────────────────────────────
+// ── Recipe row card ─────────────────────────────────────────────────────────
 class _RecipeRowCard extends StatelessWidget {
   final List<CamoteRecipe> recipes;
   final Color accentColor;
@@ -3854,11 +4690,27 @@ class _RecipeRowCard extends StatelessWidget {
           ),
           child: _SectionHeader(
             'Recipes',
-            trailing: Text('${recipes.length}', style: T.caption),
+            accent: accentColor,
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(C.radiusPill),
+              ),
+              child: Text(
+                '${recipes.length} available',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: accentColor,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
           ),
         ),
         SizedBox(
-          height: 170,
+          height: C.carouselCardH + 24,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(
@@ -3868,103 +4720,9 @@ class _RecipeRowCard extends StatelessWidget {
               C.paddingCard,
             ),
             itemCount: recipes.length,
-            itemBuilder: (ctx, i) => GestureDetector(
-              onTap: () => showModalBottomSheet(
-                context: ctx,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => _RecipeDetailSheet(
-                  recipe: recipes[i],
-                  accentColor: accentColor,
-                ),
-              ),
-              child: Container(
-                width: 160,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(C.radiusInner),
-                  border: Border.all(color: C.border),
-                  color: C.bg,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(9),
-                      ),
-                      child: SizedBox(
-                        height: 85,
-                        width: 160,
-                        child: Image.asset(
-                          recipes[i].imagePath,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: accentColor.withOpacity(0.1),
-                            child: Icon(
-                              Icons.restaurant_menu,
-                              color: accentColor,
-                              size: 32,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            recipes[i].name,
-                            style: T.subhead,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.timer_outlined,
-                                size: 10,
-                                color: accentColor,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                recipes[i].cookTime,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: accentColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: accentColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  recipes[i].difficulty,
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                    color: accentColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            itemBuilder: (ctx, i) => _RecipeCarouselCard(
+              recipe: recipes[i],
+              accentColor: accentColor,
             ),
           ),
         ),
@@ -3973,8 +4731,215 @@ class _RecipeRowCard extends StatelessWidget {
   );
 }
 
+// ── Individual recipe carousel card ─────────────────────────────────────────
+class _RecipeCarouselCard extends StatefulWidget {
+  final CamoteRecipe recipe;
+  final Color accentColor;
+  const _RecipeCarouselCard({required this.recipe, required this.accentColor});
+  @override
+  State<_RecipeCarouselCard> createState() => _RecipeCarouselCardState();
+}
+
+class _RecipeCarouselCardState extends State<_RecipeCarouselCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.recipe;
+    final accent = widget.accentColor;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => _RecipeDetailSheet(recipe: r, accentColor: accent),
+        );
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: C.carouselCardW,
+        height: C.carouselCardH,
+        margin: const EdgeInsets.only(right: 12),
+        transform: Matrix4.identity()..scale(_pressed ? 0.97 : 1.0),
+        transformAlignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(C.radiusInner),
+          color: C.surface,
+          border: Border.all(
+            color: _pressed ? accent.withOpacity(0.5) : C.border,
+            width: _pressed ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _pressed
+                  ? accent.withOpacity(0.22)
+                  : const Color(0x0F000000),
+              blurRadius: _pressed ? 16 : 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(C.radiusInner - 1),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: C.carouselImageH,
+                width: C.carouselCardW,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      r.imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: accent.withOpacity(0.1),
+                        child: Icon(
+                          Icons.restaurant_menu,
+                          color: accent,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.55),
+                          ],
+                          stops: const [0.5, 1.0],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.55),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.16),
+                          ),
+                        ),
+                        child: Text(
+                          r.difficulty,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.schedule_rounded,
+                            size: 11,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            r.cookTime,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: accent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${r.calories} kcal',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        r.name,
+                        style: T.subhead,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Text(
+                            'View recipe',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: accent,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 12,
+                            color: accent,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ============================================================================
-// RECIPE DETAIL BOTTOM SHEET (unchanged)
+// RECIPE DETAIL SHEET
 // ============================================================================
 
 class _RecipeDetailSheet extends StatefulWidget {
@@ -4006,131 +4971,202 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
     final accent = widget.accentColor;
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.9,
+      initialChildSize: 0.92,
       minChildSize: 0.5,
-      maxChildSize: 0.95,
+      maxChildSize: 0.97,
       builder: (_, sc) => Container(
         decoration: const BoxDecoration(
           color: C.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
         child: Column(
           children: [
             Container(
-              width: 36,
+              width: 40,
               height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              margin: const EdgeInsets.only(top: 12, bottom: 6),
               decoration: BoxDecoration(
                 color: C.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            SizedBox(
-              height: 190,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset(
-                    r.imagePath,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: accent.withOpacity(0.15),
-                      child: Icon(
-                        Icons.restaurant_menu,
-                        color: accent,
-                        size: 56,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.65),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          r.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SizedBox(
+                  height: 200,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        r.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: accent.withOpacity(0.15),
+                          child: Icon(
+                            Icons.restaurant_menu,
+                            color: accent,
+                            size: 56,
                           ),
                         ),
-                        const SizedBox(height: 5),
-                        Row(
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.05),
+                              Colors.black.withOpacity(0.7),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.45),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.18),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 14,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _badge(
-                              r.prepTime,
-                              Icons.access_time,
-                              Colors.white70,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                              child: Text(
+                                r.difficulty.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
                             ),
-                            const SizedBox(width: 8),
-                            _badge(
-                              r.cookTime,
-                              Icons.local_fire_department,
-                              Colors.white70,
+                            const SizedBox(height: 8),
+                            Text(
+                              r.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.3,
+                                height: 1.2,
+                              ),
                             ),
-                            const SizedBox(width: 8),
-                            _badge(
-                              r.difficulty,
-                              Icons.bar_chart,
-                              Colors.white70,
-                            ),
-                            const SizedBox(width: 8),
-                            _badge(
-                              '${r.servings} servings',
-                              Icons.people_outline,
-                              Colors.white70,
+                            const SizedBox(height: 4),
+                            Text(
+                              r.description,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.85),
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: Colors.black45,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close,
-                          size: 16,
-                          color: Colors.white,
-                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: accent.withOpacity(0.14)),
+                ),
+                child: Row(
+                  children: [
+                    _metaCell(
+                      Icons.access_time_rounded,
+                      'Prep',
+                      r.prepTime,
+                      accent,
+                    ),
+                    _metaDivider(),
+                    _metaCell(
+                      Icons.local_fire_department_outlined,
+                      'Cook',
+                      r.cookTime,
+                      accent,
+                    ),
+                    _metaDivider(),
+                    _metaCell(
+                      Icons.people_outline_rounded,
+                      'Serves',
+                      '${r.servings}',
+                      accent,
+                    ),
+                    _metaDivider(),
+                    _metaCell(
+                      Icons.local_dining_outlined,
+                      'Kcal',
+                      '${r.calories}',
+                      accent,
+                    ),
+                  ],
+                ),
               ),
             ),
             Container(
-              color: C.surface,
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: C.border)),
+              ),
               child: TabBar(
                 controller: _tab,
                 labelColor: accent,
-                unselectedLabelColor: C.textSec,
+                unselectedLabelColor: C.textMuted,
                 indicatorColor: accent,
-                labelStyle: T.subhead,
+                indicatorSize: TabBarIndicatorSize.label,
+                indicatorWeight: 2.5,
+                labelStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.1,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
                 tabs: const [
                   Tab(text: 'Ingredients'),
                   Tab(text: 'Steps'),
@@ -4143,41 +5179,61 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                 controller: _tab,
                 children: [
                   ListView(
-                    padding: const EdgeInsets.all(20),
+                    controller: sc,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                     children: [
-                      _Pill(
-                        '${r.calories} kcal / serving',
-                        bg: accent.withOpacity(0.1),
-                        fg: accent,
+                      _tabHeader(
+                        icon: Icons.shopping_basket_outlined,
+                        title: 'Ingredients',
+                        subtitle:
+                            '${r.ingredients.length} items · serves ${r.servings}',
+                        accent: accent,
                       ),
                       const SizedBox(height: 14),
                       ...r.ingredients.asMap().entries.map(
                         (e) => _Stagger(
                           index: e.key,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: C.bg,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: C.border),
+                            ),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: 28,
-                                  height: 28,
+                                  width: 26,
+                                  height: 26,
                                   decoration: BoxDecoration(
-                                    color: accent.withOpacity(0.1),
+                                    color: accent,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Center(
                                     child: Text(
                                       '${e.key + 1}',
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w800,
-                                        color: accent,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Expanded(child: Text(e.value, style: T.body)),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      e.value,
+                                      style: T.body.copyWith(
+                                        color: C.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -4186,19 +5242,27 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                     ],
                   ),
                   ListView(
-                    padding: const EdgeInsets.all(20),
-                    children: r.steps
-                        .asMap()
-                        .entries
-                        .map(
-                          (e) => _Stagger(
-                            index: e.key,
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Column(
+                    controller: sc,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    children: [
+                      _tabHeader(
+                        icon: Icons.format_list_numbered_rounded,
+                        title: 'Method',
+                        subtitle: '${r.steps.length} steps',
+                        accent: accent,
+                      ),
+                      const SizedBox(height: 16),
+                      ...r.steps.asMap().entries.map((e) {
+                        final isLast = e.key == r.steps.length - 1;
+                        return _Stagger(
+                          index: e.key,
+                          child: IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(
+                                  width: 34,
+                                  child: Column(
                                     children: [
                                       Container(
                                         width: 30,
@@ -4206,6 +5270,13 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                                         decoration: BoxDecoration(
                                           color: accent,
                                           shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: accent.withOpacity(0.28),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
                                         ),
                                         child: Center(
                                           child: Text(
@@ -4218,31 +5289,64 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                                           ),
                                         ),
                                       ),
-                                      if (e.key < r.steps.length - 1)
-                                        Container(
-                                          width: 2,
-                                          height: 28,
-                                          color: accent.withOpacity(0.2),
+                                      if (!isLast)
+                                        Expanded(
+                                          child: Container(
+                                            width: 2,
+                                            margin: const EdgeInsets.symmetric(
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: accent.withOpacity(0.25),
+                                              borderRadius:
+                                                  BorderRadius.circular(2),
+                                            ),
+                                          ),
                                         ),
                                     ],
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(top: 6),
-                                      child: Text(e.value, style: T.body),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom: isLast ? 0 : 16,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: C.bg,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: C.border),
+                                      ),
+                                      child: Text(
+                                        e.value,
+                                        style: T.body.copyWith(
+                                          color: C.textPrimary,
+                                          height: 1.55,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
-                        )
-                        .toList(),
+                        );
+                      }),
+                    ],
                   ),
                   ListView(
-                    padding: const EdgeInsets.all(20),
+                    controller: sc,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                     children: [
+                      _tabHeader(
+                        icon: Icons.lightbulb_outline_rounded,
+                        title: 'Pro Tips',
+                        subtitle: '${r.tips.length} tips from the kitchen',
+                        accent: accent,
+                      ),
+                      const SizedBox(height: 14),
                       ...r.tips.asMap().entries.map(
                         (e) => _Stagger(
                           index: e.key,
@@ -4250,30 +5354,46 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: accent.withOpacity(0.06),
-                              borderRadius: BorderRadius.circular(
-                                C.radiusInner,
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  accent.withOpacity(0.09),
+                                  accent.withOpacity(0.03),
+                                ],
                               ),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: accent.withOpacity(0.18),
+                                color: accent.withOpacity(0.22),
                               ),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
-                                  Icons.lightbulb_outline,
-                                  color: accent,
-                                  size: 17,
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: BoxDecoration(
+                                    color: accent,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  child: const Icon(
+                                    Icons.lightbulb,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 12),
                                 Expanded(
-                                  child: Text(
-                                    e.value,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: accent.withOpacity(0.87),
-                                      height: 1.5,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 3),
+                                    child: Text(
+                                      e.value,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: C.textPrimary,
+                                        height: 1.55,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -4283,29 +5403,32 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                         ),
                       ),
                       Container(
+                        margin: const EdgeInsets.only(top: 6),
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: C.primaryLight,
-                          borderRadius: BorderRadius.circular(C.radiusInner),
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: C.primary.withOpacity(0.18),
                           ),
                         ),
                         child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(
                               Icons.info_outline,
                               color: C.primary,
-                              size: 15,
+                              size: 16,
                             ),
-                            SizedBox(width: 8),
+                            SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Wash camote thoroughly and peel if the skin is damaged.',
+                                'Wash camote thoroughly and peel if the skin is damaged. Always cook before eating.',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: C.primary,
-                                  height: 1.4,
+                                  height: 1.5,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
@@ -4323,25 +5446,70 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
     );
   }
 
-  Widget _badge(String label, IconData icon, Color color) => Row(
-    mainAxisSize: MainAxisSize.min,
+  Widget _tabHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color accent,
+  }) => Row(
     children: [
-      Icon(icon, size: 10, color: color),
-      const SizedBox(width: 3),
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          color: color,
-          fontWeight: FontWeight.w600,
+      Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: accent.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 16, color: accent),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: T.heading),
+            const SizedBox(height: 2),
+            Text(subtitle, style: T.caption),
+          ],
         ),
       ),
     ],
   );
+
+  Widget _metaCell(IconData icon, String label, String value, Color accent) =>
+      Expanded(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: accent),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: C.textMuted,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: accent,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _metaDivider() => Container(width: 1, height: 34, color: C.border);
 }
 
 // ============================================================================
-// DETECTIONS PAGE (formerly History)
+// DETECTIONS PAGE
 // ============================================================================
 
 class DetectionsPage extends StatefulWidget {
@@ -4365,7 +5533,10 @@ class _DetectionsPageState extends State<DetectionsPage> {
     setState(() => _loading = false);
   }
 
-  void add(DetectionLog log) => setState(() => _logs.insert(0, log));
+  void add(DetectionLog log) {
+    setState(() => _logs.insert(0, log));
+  }
+
   Future<void> _del(DetectionLog log) async {
     setState(() => _loading = true);
     await DetectionLogger.delete(log.id);
@@ -4384,10 +5555,14 @@ class _DetectionsPageState extends State<DetectionsPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: const BoxDecoration(
-                  color: C.errLight,
+                  color: C.primaryLight,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.delete_outline, color: C.err, size: 28),
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: C.primary,
+                  size: 28,
+                ),
               ),
               const SizedBox(height: 14),
               Text(
@@ -4422,7 +5597,7 @@ class _DetectionsPageState extends State<DetectionsPage> {
                     child: _dlgBtn(
                       'Clear All',
                       onTap: () => Navigator.pop(context, true),
-                      bg: C.err,
+                      bg: C.primary, // Green
                     ),
                   ),
                 ],
@@ -4439,6 +5614,193 @@ class _DetectionsPageState extends State<DetectionsPage> {
     }
   }
 
+  void _detail(DetectionLog log) => showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _DetailSheet(log: log, onDelete: () async => _del(log)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: C.bg,
+      appBar: _appBar('Detections'),
+      body: Column(
+        children: [
+          // ── Gradient summary banner ──
+          Container(
+            margin: const EdgeInsets.fromLTRB(
+              C.paddingPage,
+              12,
+              C.paddingPage,
+              0,
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [C.primary, C.primaryDark],
+              ),
+              borderRadius: BorderRadius.circular(C.radiusCard),
+              boxShadow: [
+                BoxShadow(
+                  color: C.primary.withOpacity(0.28),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.22)),
+                  ),
+                  child: const Icon(
+                    Icons.history_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_logs.length}',
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.6,
+                          height: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _logs.length == 1
+                            ? 'Saved detection'
+                            : 'Saved detections',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withOpacity(0.85),
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_logs.isNotEmpty)
+                  GestureDetector(
+                    onTap: _clearAll,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.16),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.22),
+                        ),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
+                            size: 15,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Clear All',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: C.primary),
+                  )
+                : _logs.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: C.bg,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: C.border, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.history,
+                            size: 38,
+                            color: C.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text('No detections yet', style: T.heading),
+                        const SizedBox(height: 4),
+                        Text('Scan and save a camote', style: T.body),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    color: C.primary,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: C.paddingPage,
+                        vertical: 4,
+                      ),
+                      itemCount: _logs.length,
+                      itemBuilder: (_, i) {
+                        final log = _logs[i];
+                        return _Stagger(
+                          index: i > 5 ? 5 : i,
+                          child: _DetectionCard(
+                            log: log,
+                            onTap: () => _detail(log),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetectionCard extends StatelessWidget {
+  final DetectionLog log;
+  final VoidCallback onTap;
+
+  const _DetectionCard({required this.log, required this.onTap});
+
   CamoteVariety? _v(String cls) {
     try {
       return camoteVarieties.firstWhere(
@@ -4449,421 +5811,494 @@ class _DetectionsPageState extends State<DetectionsPage> {
     }
   }
 
-  void _detail(DetectionLog log, DetectionResult? top, CamoteVariety? v) =>
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => _DetailSheet(
-          log: log,
-          top: top,
-          variety: v,
-          onDelete: () async => _del(log),
-        ),
-      );
-
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: C.bg,
-    appBar: _appBar('Detections'),
-    body: Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(
-            C.paddingPage,
-            12,
-            C.paddingPage,
-            0,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: C.surface,
-            borderRadius: BorderRadius.circular(C.radiusCard),
-            border: Border.all(color: C.border),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${_logs.length}',
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: C.primary,
-                      ),
-                    ),
-                    Text(
-                      _logs.length == 1 ? 'detection' : 'detections',
-                      style: T.caption,
-                    ),
-                  ],
+  Widget build(BuildContext context) {
+    final top = log.results.isEmpty ? null : log.results.first;
+    final variety = top == null ? null : _v(top.className);
+    final count = log.results.length;
+    final accent = _accent(top?.className ?? '');
+
+    final Map<String, int> tally = {};
+    for (final r in log.results) {
+      final key = r.className.toLowerCase();
+      tally[key] = (tally[key] ?? 0) + 1;
+    }
+
+    return _TappableCard(
+      onTap: onTap,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Left Accent Bar
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(C.radiusCard - 1),
+                  bottomLeft: Radius.circular(C.radiusCard - 1),
                 ),
               ),
-              if (_logs.isNotEmpty)
-                GestureDetector(
-                  onTap: _clearAll,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: C.errLight,
-                      borderRadius: BorderRadius.circular(C.radiusInner),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.delete_outline, color: C.err, size: 15),
-                        SizedBox(width: 5),
-                        Text(
-                          'Clear All',
-                          style: TextStyle(
-                            color: C.err,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+            ),
+            // Thumbnail with Gradient Overlay
+            ClipRRect(
+              child: SizedBox(
+                width: 90,
+                child: File(log.imagePath).existsSync()
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.file(File(log.imagePath), fit: BoxFit.cover),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.4),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator(color: C.primary))
-              : _logs.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: C.bg,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: C.border, width: 2),
-                        ),
+                        ],
+                      )
+                    : Container(
+                        color: C.bg,
                         child: const Icon(
-                          Icons.history,
-                          size: 38,
+                          Icons.image_not_supported,
+                          size: 24,
                           color: C.textMuted,
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      Text('No detections yet', style: T.heading),
-                      const SizedBox(height: 4),
-                      Text('Scan and save a camote', style: T.body),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  color: C.primary,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: C.paddingPage,
-                      vertical: 4,
-                    ),
-                    itemCount: _logs.length,
-                    itemBuilder: (_, i) {
-                      final log = _logs[i];
-                      final top = log.results.isEmpty
-                          ? null
-                          : log.results.first;
-                      final v = _v(top?.className ?? '');
-                      return _Stagger(
-                        index: i > 5 ? 5 : i,
-                        child: _DetectionCard(
-                          log: log,
-                          top: top,
-                          variety: v,
-                          onTap: () => _detail(log, top, v),
-                          onDelete: () => _del(log),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _DetectionCard extends StatelessWidget {
-  final DetectionLog log;
-  final DetectionResult? top;
-  final CamoteVariety? variety;
-  final VoidCallback onTap, onDelete;
-  const _DetectionCard({
-    required this.log,
-    required this.top,
-    required this.variety,
-    required this.onTap,
-    required this.onDelete,
-  });
-  @override
-  Widget build(BuildContext context) => _TappableCard(
-    onTap: onTap,
-    margin: const EdgeInsets.only(bottom: 10),
-    child: IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            width: 4,
-            decoration: BoxDecoration(
-              color: _accent(top?.className ?? ''),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(C.radiusCard - 1),
-                bottomLeft: Radius.circular(C.radiusCard - 1),
               ),
             ),
-          ),
-          ClipRRect(
-            child: SizedBox(
-              width: 82,
-              child: File(log.imagePath).existsSync()
-                  ? Image.file(File(log.imagePath), fit: BoxFit.cover)
-                  : Container(
-                      color: C.bg,
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        size: 24,
-                        color: C.textMuted,
-                      ),
-                    ),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    top?.className.cap ?? 'Unknown',
-                    style: T.heading,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (variety != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      variety!.commonName,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: C.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time_rounded,
-                        size: 11,
-                        color: C.textMuted,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          TimeFormatter.short(log.timestamp),
-                          style: T.caption,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Text(
-                        TimeFormatter.rel(log.timestamp),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: C.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (top != null) ...[
-                        const SizedBox(width: 7),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: C.primaryLight,
-                            borderRadius: BorderRadius.circular(C.radiusPill),
-                          ),
+            // Information Area
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
                           child: Text(
-                            '${(top!.confidence * 100).toStringAsFixed(0)}%',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: C.primary,
+                            variety?.name ?? top?.className.cap ?? 'Unknown',
+                            style: T.heading,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (count > 1)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: C.primaryLight,
+                              borderRadius: BorderRadius.circular(C.radiusPill),
+                            ),
+                            child: Text(
+                              '$count items',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: C.primary,
+                              ),
                             ),
                           ),
+                      ],
+                    ),
+                    if (variety != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        variety.commonName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: accent,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (count > 1) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: tally.entries.map((e) {
+                          final c = _accent(e.key);
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: c.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${e.key.cap} ×${e.value}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: c,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time_rounded,
+                          size: 12,
+                          color: C.textMuted,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          TimeFormatter.short(log.timestamp),
+                          style: T.caption,
+                        ),
+                        const Spacer(),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: C.textMuted,
                         ),
                       ],
-                    ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          TimeFormatter.rel(log.timestamp),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: accent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (top != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: accent.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(C.radiusPill),
+                            ),
+                            child: Text(
+                              '${(top.confidence * 100).toStringAsFixed(0)}% match',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: accent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailSheet extends StatefulWidget {
+  final DetectionLog log;
+  final Future<void> Function() onDelete;
+  const _DetailSheet({required this.log, required this.onDelete});
+  @override
+  State<_DetailSheet> createState() => _DetailSheetState();
+}
+
+class _DetailSheetState extends State<_DetailSheet> {
+  double? _iw, _ih;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDims();
+  }
+
+  Future<void> _loadDims() async {
+    final f = File(widget.log.imagePath);
+    if (!await f.exists()) return;
+    try {
+      final b = await f.readAsBytes();
+      final d = img.decodeImage(b);
+      if (d != null && mounted) {
+        setState(() {
+          _iw = d.width.toDouble();
+          _ih = d.height.toDouble();
+        });
+      }
+    } catch (_) {}
+  }
+
+  CamoteVariety? _v(String cls) {
+    try {
+      return camoteVarieties.firstWhere(
+        (v) => v.name.toLowerCase() == cls.toLowerCase(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final log = widget.log;
+    final top = log.results.isEmpty ? null : log.results.first;
+    final mainVariety = top == null ? null : _v(top.className);
+    final count = log.results.length;
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (_, sc) => Container(
+        decoration: const BoxDecoration(
+          color: C.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              decoration: BoxDecoration(
+                color: C.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Detection Details', style: T.caption),
+                        if (top != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            count > 1
+                                ? '$count Camotes Detected'
+                                : top.className.cap,
+                            style: T.display,
+                          ),
+                          if (count == 1 && mainVariety != null)
+                            Text(
+                              mainVariety.commonName,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: C.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: C.bg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: C.border),
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 16,
+                        color: C.textSec,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 10, bottom: 12, top: 12),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: GestureDetector(
-                onTap: onDelete,
-                child: Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: C.errLight,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Icon(
-                    Icons.delete_outline_rounded,
-                    size: 16,
-                    color: C.err,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _DetailSheet extends StatelessWidget {
-  final DetectionLog log;
-  final DetectionResult? top;
-  final CamoteVariety? variety;
-  final Future<void> Function() onDelete;
-  const _DetailSheet({
-    required this.log,
-    this.top,
-    this.variety,
-    required this.onDelete,
-  });
-  @override
-  Widget build(BuildContext context) => DraggableScrollableSheet(
-    expand: false,
-    initialChildSize: 0.87,
-    minChildSize: 0.5,
-    maxChildSize: 0.95,
-    builder: (_, sc) => Container(
-      decoration: const BoxDecoration(
-        color: C.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 36,
-            height: 4,
-            margin: const EdgeInsets.only(top: 12, bottom: 4),
-            decoration: BoxDecoration(
-              color: C.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Detection Details', style: T.caption),
-                      if (top != null) ...[
-                        const SizedBox(height: 2),
-                        Text(top!.className.cap, style: T.display),
-                        if (variety != null)
-                          Text(
-                            variety!.commonName,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: C.primary,
-                              fontWeight: FontWeight.w600,
+            const Divider(height: 1, color: C.border),
+            Expanded(
+              child: ListView(
+                controller: sc,
+                padding: const EdgeInsets.all(20),
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(C.radiusCard),
+                    child: AspectRatio(
+                      aspectRatio: (_iw != null && _ih != null && _ih! > 0)
+                          ? (_iw! / _ih!).clamp(0.6, 1.6)
+                          : 4.0 / 3.0,
+                      child: File(log.imagePath).existsSync()
+                          ? Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.file(
+                                  File(log.imagePath),
+                                  fit: BoxFit.cover,
+                                ),
+                                CustomPaint(
+                                  painter: _BBPainter(
+                                    dets: log.results,
+                                    imageWidth: _iw,
+                                    imageHeight: _ih,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Container(
+                              color: C.bg,
+                              child: const Icon(
+                                Icons.image_not_supported,
+                                size: 56,
+                                color: C.textMuted,
+                              ),
                             ),
-                          ),
-                      ],
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: C.bg,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: C.border),
                     ),
-                    child: const Icon(Icons.close, size: 16, color: C.textSec),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: C.border),
-          Expanded(
-            child: ListView(
-              controller: sc,
-              padding: const EdgeInsets.all(20),
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(C.radiusCard),
-                  child: SizedBox(
-                    height: 240,
-                    child: File(log.imagePath).existsSync()
-                        ? Image.file(File(log.imagePath), fit: BoxFit.cover)
-                        : Container(
-                            color: C.bg,
-                            child: const Icon(
-                              Icons.image_not_supported,
-                              size: 56,
-                              color: C.textMuted,
-                            ),
+                  const SizedBox(height: 16),
+                  ...log.results.asMap().entries.map((e) {
+                    final d = e.value;
+                    final variety = _v(d.className);
+                    final color = _accent(d.className);
+                    return _Stagger(
+                      index: e.key,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _Card(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 46,
+                                height: 46,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      color,
+                                      Color.lerp(color, Colors.black, 0.25)!,
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: color.withOpacity(0.28),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      variety?.name ?? d.className.cap,
+                                      style: T.subhead,
+                                    ),
+                                    if (variety != null)
+                                      Text(
+                                        variety.commonName,
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: color,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: color.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(
+                                    C.radiusPill,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${(d.confidence * 100).toStringAsFixed(0)}%',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: color,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (top != null) ...[
+                        ),
+                      ),
+                    );
+                  }),
                   _Card(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _SectionHeader('Confidence'),
-                        const SizedBox(height: 14),
+                        const _SectionHeader('Timestamp'),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
-                            const Icon(Icons.percent, color: C.primary),
+                            const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 16,
+                              color: C.textSec,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                TimeFormatter.full(log.timestamp),
+                                style: T.subhead,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time,
+                              size: 16,
+                              color: C.textSec,
+                            ),
                             const SizedBox(width: 8),
                             Text(
-                              '${(top!.confidence * 100).toStringAsFixed(0)}%',
+                              TimeFormatter.rel(log.timestamp),
                               style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
                                 color: C.primary,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -4871,86 +6306,39 @@ class _DetailSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                ],
-                _Card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionHeader('Timestamp'),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today_outlined,
-                            size: 16,
-                            color: C.textSec,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              TimeFormatter.full(log.timestamp),
-                              style: T.subhead,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.access_time,
-                            size: 16,
-                            color: C.textSec,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            TimeFormatter.rel(log.timestamp),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: C.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      await onDelete();
-                    },
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Delete this Detection'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: C.err,
-                      foregroundColor: C.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(C.radiusInner),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await widget.onDelete();
+                      },
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Delete this Detection'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: C.err,
+                        foregroundColor: C.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(C.radiusInner),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 // ============================================================================
@@ -4964,13 +6352,36 @@ class LibraryPage extends StatelessWidget {
     backgroundColor: C.bg,
     appBar: _appBar('Library'),
     body: SingleChildScrollView(
-      padding: const EdgeInsets.all(C.paddingPage),
+      padding: const EdgeInsets.fromLTRB(
+        C.paddingPage,
+        C.paddingPage,
+        C.paddingPage,
+        28,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 4),
+          _Stagger(
+            index: 0,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Camote Varieties', style: T.display),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Explore the four varieties grown locally in Leyte. '
+                    'Tap any card to open the full guide.',
+                    style: T.body,
+                  ),
+                  // REMOVED: The Row containing the pills for a cleaner look.
+                ],
+              ),
+            ),
+          ),
           ...camoteVarieties.asMap().entries.map(
-            (e) => _Stagger(index: e.key, child: _VarietyCard(e.value)),
+            (e) => _Stagger(index: e.key + 1, child: _VarietyCard(e.value)),
           ),
         ],
       ),
@@ -4984,158 +6395,226 @@ class _VarietyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accentColor = _accent(v.name);
-    return _TappableCard(
-      onTap: () => _show(context),
-      margin: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(C.radiusCard - 1),
-                  topRight: Radius.circular(C.radiusCard - 1),
-                ),
-                child: SizedBox(
-                  height: 150,
-                  width: double.infinity,
-                  child: Image.asset(
-                    v.imagePath,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: C.bg,
-                      child: const Center(
-                        child: Icon(Icons.image, color: C.textMuted, size: 40),
-                      ),
-                    ),
-                  ),
-                ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: GestureDetector(
+        onTap: () => _show(context),
+        child: Container(
+          decoration: BoxDecoration(
+            color: C.surface,
+            borderRadius: BorderRadius.circular(C.radiusCard),
+            border: Border.all(color: C.border),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A000000),
+                blurRadius: 12,
+                offset: Offset(0, 4),
               ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(C.radiusPill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(C.radiusCard - 1),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 170,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      const Icon(
-                        Icons.restaurant_menu,
-                        size: 11,
-                        color: Colors.white,
+                      Image.asset(
+                        v.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: C.bg,
+                          child: const Center(
+                            child: Icon(
+                              Icons.image,
+                              color: C.textMuted,
+                              size: 40,
+                            ),
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${v.recipes.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.15),
+                              Colors.black.withOpacity(0.72),
+                            ],
+                            stops: const [0.35, 1.0],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(width: 4, color: accentColor),
+                      ),
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.55),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.16),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.restaurant_menu,
+                                size: 11,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                '${v.recipes.length} recipes',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 18,
+                        right: 18,
+                        bottom: 14,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Emphasized local name (bigger, colored)
+                            Text(
+                              v.name.toUpperCase(),
+                              style: TextStyle(
+                                color: accentColor,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            // Secondary English name
+                            Text(
+                              v.commonName,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.85),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(v.name, style: T.heading),
-                          const SizedBox(height: 2),
-                          Text(
-                            v.commonName,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: accentColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                  child: Row(
+                    children: [
+                      _miniStat(
+                        'Glycemic',
+                        _giLabel(v.name),
+                        accentColor,
+                        Icons.monitor_heart_outlined,
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: C.primaryLight,
-                        borderRadius: BorderRadius.circular(9),
+                      const SizedBox(width: 8),
+                      _miniStat(
+                        'Daily Max',
+                        _dailyMaxShort(v.name),
+                        accentColor,
+                        Icons.today_outlined,
                       ),
-                      child: const Icon(
-                        Icons.chevron_right,
-                        size: 16,
-                        color: C.primary,
+                      const SizedBox(width: 8),
+                      _miniStat(
+                        'Energy',
+                        _kcal(v.name),
+                        accentColor,
+                        Icons.local_fire_department_outlined,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _miniStat('GI', _giLabel(v.name), accentColor),
-                    const SizedBox(width: 8),
-                    _miniStat('Daily Max', _dailyMaxShort(v.name), accentColor),
-                    const SizedBox(width: 8),
-                    _miniStat('kcal/100g', _kcal(v.name), accentColor),
-                  ],
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: accentColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _miniStat(String label, String value, Color color) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 9,
-              color: color.withOpacity(0.7),
-              fontWeight: FontWeight.w600,
-            ),
+  Widget _miniStat(String label, String value, Color color, IconData icon) =>
+      Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withOpacity(0.14)),
           ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 13, color: color),
+              const SizedBox(height: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  color: color.withOpacity(0.85),
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                  letterSpacing: -0.1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 
   static String _giLabel(String n) =>
       n.toLowerCase() == 'tapol' ? 'Low–Med' : 'Medium';
@@ -5161,7 +6640,7 @@ class _VarietyCard extends StatelessWidget {
 }
 
 // ============================================================================
-// LIBRARY DETAIL SHEET — 5 tabs
+// LIBRARY DETAIL SHEET
 // ============================================================================
 
 class _LibraryDetailSheet extends StatefulWidget {
@@ -5190,7 +6669,6 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
   Widget build(BuildContext context) {
     final v = widget.variety;
     final accentColor = _accent(v.name);
-    final accentLightColor = _accentLight(v.name);
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.92,
@@ -5199,23 +6677,32 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
       builder: (_, sc) => Container(
         decoration: const BoxDecoration(
           color: C.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
         child: Column(
           children: [
             Container(
-              width: 36,
+              width: 40,
               height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              margin: const EdgeInsets.only(top: 12, bottom: 6),
               decoration: BoxDecoration(
                 color: C.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(
                 children: [
+                  Container(
+                    width: 10,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -5224,9 +6711,10 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                         Text(
                           v.commonName,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12.5,
                             color: accentColor,
                             fontWeight: FontWeight.w600,
+                            letterSpacing: -0.05,
                           ),
                         ),
                       ],
@@ -5258,12 +6746,19 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
               child: TabBar(
                 controller: _tab,
                 labelColor: accentColor,
-                unselectedLabelColor: C.textSec,
+                unselectedLabelColor: C.textMuted,
                 indicatorColor: accentColor,
+                indicatorWeight: 2.5,
+                indicatorSize: TabBarIndicatorSize.label,
                 isScrollable: true,
                 labelStyle: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w700,
+                  letterSpacing: 0.1,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
                 ),
                 tabs: const [
                   Tab(text: 'Overview'),
@@ -5278,8 +6773,8 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
               child: TabBarView(
                 controller: _tab,
                 children: [
-                  // ── OVERVIEW ─────────────────────────────────────────────────
                   ListView(
+                    controller: sc,
                     padding: const EdgeInsets.all(C.paddingPage),
                     children: [
                       _ImageCarousel(imagePaths: v.imagePaths),
@@ -5288,9 +6783,15 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _SectionHeader('Description'),
+                            _SectionHeader('Description', accent: accentColor),
                             const SizedBox(height: 10),
-                            Text(v.description, style: T.body),
+                            Text(
+                              v.description,
+                              style: T.body.copyWith(
+                                color: C.textPrimary,
+                                height: 1.6,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -5299,7 +6800,10 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _SectionHeader('Characteristics'),
+                            _SectionHeader(
+                              'Characteristics',
+                              accent: accentColor,
+                            ),
                             const SizedBox(height: 4),
                             const Divider(height: 1, color: C.border),
                             _CharRow(Icons.straighten, 'Shape', v.shape),
@@ -5325,28 +6829,19 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _SectionHeader('Health Benefits'),
+                            _SectionHeader(
+                              'Health Benefits',
+                              accent: accentColor,
+                            ),
                             const SizedBox(height: 10),
                             ...v.benefits.map((b) => _bullet(b, accentColor)),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      _Card(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _SectionHeader('Traditional Dishes'),
-                            const SizedBox(height: 10),
-                            ...v.dishes.map((d) => _bullet(d, accentColor)),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
-
-                  // ── NUTRITION ────────────────────────────────────────────────
                   ListView(
+                    controller: sc,
                     padding: const EdgeInsets.all(C.paddingPage),
                     children: [
                       _Stagger(
@@ -5355,42 +6850,36 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _SectionHeader('Per 100 g Serving'),
+                              _SectionHeader(
+                                'Per 100 g Serving',
+                                accent: accentColor,
+                              ),
                               const SizedBox(height: 14),
-                              GridView.count(
-                                crossAxisCount: 2,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                                childAspectRatio: 2.4,
-                                children: [
-                                  _nutCard(
+                              _NutGrid(
+                                accentColor: accentColor,
+                                items: [
+                                  (
                                     'Calories',
                                     v.medicalInfo.calories100g,
                                     Icons.local_fire_department,
                                   ),
-                                  _nutCard(
-                                    'Carbohydrates',
+                                  (
+                                    'Carbs',
                                     v.medicalInfo.carbs100g,
                                     Icons.grain,
                                   ),
-                                  _nutCard(
-                                    'Dietary Fiber',
-                                    v.medicalInfo.fiber,
-                                    Icons.spa,
-                                  ),
-                                  _nutCard(
+                                  ('Fiber', v.medicalInfo.fiber, Icons.spa),
+                                  (
                                     'Potassium',
                                     v.medicalInfo.potassium,
                                     Icons.bolt,
                                   ),
-                                  _nutCard(
+                                  (
                                     'Vitamin A',
                                     v.medicalInfo.vitaminA,
                                     Icons.visibility,
                                   ),
-                                  _nutCard(
+                                  (
                                     'Vitamin C',
                                     v.medicalInfo.vitaminC,
                                     Icons.eco,
@@ -5408,7 +6897,10 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _SectionHeader('Glycaemic Profile'),
+                              _SectionHeader(
+                                'Glycaemic Profile',
+                                accent: accentColor,
+                              ),
                               const SizedBox(height: 12),
                               _giRow(
                                 'Glycaemic Index',
@@ -5431,7 +6923,10 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _SectionHeader('Medicinal Uses'),
+                              _SectionHeader(
+                                'Medicinal Uses',
+                                accent: accentColor,
+                              ),
                               const SizedBox(height: 10),
                               ...v.medicalInfo.medicinalUses.map(
                                 (u) => _bullet(u, C.primary),
@@ -5440,8 +6935,8 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      if (v.medicalInfo.drugInteractions.isNotEmpty)
+                      if (v.medicalInfo.drugInteractions.isNotEmpty) ...[
+                        const SizedBox(height: 12),
                         _Stagger(
                           index: 3,
                           child: _Card(
@@ -5450,6 +6945,7 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                               children: [
                                 _SectionHeader(
                                   'Drug Interactions',
+                                  accent: C.warn,
                                   trailing: _Pill(
                                     'Consult a doctor',
                                     bg: C.warnLight,
@@ -5464,8 +6960,9 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                             ),
                           ),
                         ),
-                      const SizedBox(height: 12),
-                      if (v.medicalInfo.contraindications.isNotEmpty)
+                      ],
+                      if (v.medicalInfo.contraindications.isNotEmpty) ...[
+                        const SizedBox(height: 12),
                         _Stagger(
                           index: 4,
                           child: _Card(
@@ -5474,6 +6971,7 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                               children: [
                                 _SectionHeader(
                                   'Contraindications',
+                                  accent: C.err,
                                   trailing: _Pill(
                                     'Important',
                                     bg: C.errLight,
@@ -5488,38 +6986,57 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
-
-                  // ── INTAKE ────────────────────────────────────────────────────
                   ListView(
+                    controller: sc,
                     padding: const EdgeInsets.all(C.paddingPage),
                     children: [
                       _Stagger(
                         index: 0,
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                               colors: [
                                 accentColor,
-                                accentColor.withOpacity(0.78),
+                                Color.lerp(accentColor, Colors.black, 0.2)!,
                               ],
                             ),
                             borderRadius: BorderRadius.circular(C.radiusCard),
+                            boxShadow: [
+                              BoxShadow(
+                                color: accentColor.withOpacity(0.28),
+                                blurRadius: 14,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Recommended Intake',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.monitor_heart_outlined,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Recommended Intake',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
                               Row(
                                 children: [
                                   _intakeHero('Daily Max', v.intake.dailyMax),
@@ -5549,16 +7066,14 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.block,
-                                    size: 17,
-                                    color: C.warn,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text('Limitations', style: T.subhead),
-                                ],
+                              _SectionHeader(
+                                'Limitations',
+                                accent: C.warn,
+                                trailing: const Icon(
+                                  Icons.block,
+                                  size: 16,
+                                  color: C.warn,
+                                ),
                               ),
                               const SizedBox(height: 10),
                               ...v.intake.limitations.map(
@@ -5575,16 +7090,14 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.info_outline,
-                                    size: 17,
-                                    color: C.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text('General Cautions', style: T.subhead),
-                                ],
+                              _SectionHeader(
+                                'General Cautions',
+                                accent: accentColor,
+                                trailing: const Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: C.primary,
+                                ),
                               ),
                               const SizedBox(height: 10),
                               ...v.intake.cautions.map(
@@ -5631,9 +7144,8 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                       ),
                     ],
                   ),
-
-                  // ── RECIPES ───────────────────────────────────────────────────
                   ListView(
+                    controller: sc,
                     padding: const EdgeInsets.all(C.paddingPage),
                     children: v.recipes
                         .asMap()
@@ -5649,92 +7161,68 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                         )
                         .toList(),
                   ),
-
-                  // ── FOR WHO ───────────────────────────────────────────────────
                   ListView(
+                    controller: sc,
                     padding: const EdgeInsets.all(C.paddingPage),
                     children: [
                       _Stagger(
                         index: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                accentColor.withOpacity(0.1),
-                                accentLightColor,
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(C.radiusCard),
-                            border: Border.all(
-                              color: accentColor.withOpacity(0.18),
-                            ),
-                          ),
+                        child: _Card(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.people_outline,
-                                    color: accentColor,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Recommended For',
-                                    style: T.heading.copyWith(
-                                      color: accentColor,
-                                    ),
-                                  ),
-                                ],
+                              _SectionHeader(
+                                'Recommended For',
+                                accent: accentColor,
+                                trailing: _Pill(
+                                  '${v.targetedPeople.length} groups',
+                                  bg: accentColor.withOpacity(0.1),
+                                  fg: accentColor,
+                                ),
                               ),
                               const SizedBox(height: 12),
                               ...v.targetedPeople.asMap().entries.map(
-                                (e) => _Stagger(
-                                  index: e.key,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          width: 28,
-                                          height: 28,
-                                          decoration: BoxDecoration(
-                                            color: accentColor,
-                                            shape: BoxShape.circle,
+                                (e) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: 30,
+                                        height: 30,
+                                        decoration: BoxDecoration(
+                                          color: accentColor.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
-                                          child: Center(
-                                            child: Text(
-                                              '${e.key + 1}',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w800,
-                                              ),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '${e.key + 1}',
+                                            style: TextStyle(
+                                              color: accentColor,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w800,
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 5,
-                                            ),
-                                            child: Text(
-                                              e.value,
-                                              style: T.body.copyWith(
-                                                color: C.textPrimary,
-                                              ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 6,
+                                          ),
+                                          child: Text(
+                                            e.value,
+                                            style: T.body.copyWith(
+                                              color: C.textPrimary,
                                             ),
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -5749,14 +7237,12 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const _SectionHeader('Health Benefits'),
-                              const SizedBox(height: 10),
-                              ...v.benefits.asMap().entries.map(
-                                (e) => _Stagger(
-                                  index: e.key,
-                                  child: _bullet(e.value, accentColor),
-                                ),
+                              _SectionHeader(
+                                'Health Benefits',
+                                accent: accentColor,
                               ),
+                              const SizedBox(height: 10),
+                              ...v.benefits.map((b) => _bullet(b, accentColor)),
                             ],
                           ),
                         ),
@@ -5771,45 +7257,6 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
       ),
     );
   }
-
-  Widget _nutCard(String label, String value, IconData icon) => Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: C.primary.withOpacity(0.06),
-      borderRadius: BorderRadius.circular(C.radiusInner),
-      border: Border.all(color: C.primary.withOpacity(0.14)),
-    ),
-    child: Row(
-      children: [
-        Icon(icon, size: 18, color: C.primary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 9,
-                  color: C.primary.withOpacity(0.7),
-                ),
-              ),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: C.primary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
 
   Widget _giRow(String label, String value, Color accentColor) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
@@ -5839,7 +7286,7 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
     child: Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withOpacity(0.18),
         borderRadius: BorderRadius.circular(C.radiusInner),
       ),
       child: Column(
@@ -5848,9 +7295,9 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
           Text(
             label,
             style: const TextStyle(
-              color: Colors.white60,
+              color: Colors.white70,
               fontSize: 10,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 3),
@@ -5871,7 +7318,78 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
   );
 }
 
-// ── Expandable recipe card (Library recipes tab) ──────────────────────────────
+class _NutGrid extends StatelessWidget {
+  final Color accentColor;
+  final List<(String, String, IconData)> items;
+  const _NutGrid({required this.accentColor, required this.items});
+
+  @override
+  Widget build(BuildContext context) => GridView.count(
+    crossAxisCount: 2,
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    crossAxisSpacing: 10,
+    mainAxisSpacing: 10,
+    childAspectRatio: 2.6,
+    children: items
+        .map(
+          (it) => Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(C.radiusInner),
+              border: Border.all(color: accentColor.withOpacity(0.16)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Icon(it.$3, size: 15, color: accentColor),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        it.$1,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          color: accentColor.withOpacity(0.85),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        it.$2,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: accentColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )
+        .toList(),
+  );
+}
+
+// ── Expandable recipe card ───────────────────────────────────────────────────
 class _ExpandableRecipeCard extends StatefulWidget {
   final CamoteRecipe recipe;
   final Color accentColor;
@@ -5885,6 +7403,8 @@ class _ExpandableRecipeCard extends StatefulWidget {
 
 class _ExpandableRecipeCardState extends State<_ExpandableRecipeCard> {
   bool _expanded = false;
+  static const double _thumbW = 100.0;
+
   @override
   Widget build(BuildContext context) {
     final r = widget.recipe;
@@ -5906,192 +7426,192 @@ class _ExpandableRecipeCardState extends State<_ExpandableRecipeCard> {
             BoxShadow(
               color: _expanded
                   ? accent.withOpacity(0.1)
-                  : const Color(0x08000000),
-              blurRadius: _expanded ? 14 : 8,
-              offset: const Offset(0, 3),
+                  : const Color(0x0A000000),
+              blurRadius: _expanded ? 14 : 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(C.radiusCard - 1),
-                    bottomLeft: Radius.circular(C.radiusCard - 1),
-                  ),
-                  child: SizedBox(
-                    width: 90,
-                    height: 90,
-                    child: Image.asset(
-                      r.imagePath,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: accent.withOpacity(0.1),
-                        child: Icon(
-                          Icons.restaurant_menu,
-                          color: accent,
-                          size: 36,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: _thumbW,
+                      child: Image.asset(
+                        r.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: accent.withOpacity(0.1),
+                          child: Icon(
+                            Icons.restaurant_menu,
+                            color: accent,
+                            size: 36,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(r.name, style: T.subhead),
-                        const SizedBox(height: 4),
-                        Text(
-                          r.description,
-                          style: T.body,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _chip(r.difficulty, Icons.bar_chart, accent),
-                            const SizedBox(width: 6),
-                            _chip(
-                              '${r.calories} kcal',
-                              Icons.local_fire_department_outlined,
-                              accent,
+                            Text(r.name, style: T.subhead),
+                            const SizedBox(height: 4),
+                            Text(
+                              r.description,
+                              style: T.body,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const Spacer(),
-                            Icon(
-                              _expanded
-                                  ? Icons.keyboard_arrow_up
-                                  : Icons.keyboard_arrow_down,
-                              color: C.textMuted,
-                              size: 20,
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                _chip(r.difficulty, Icons.bar_chart, accent),
+                                const SizedBox(width: 6),
+                                _chip(
+                                  '${r.calories} kcal',
+                                  Icons.local_fire_department_outlined,
+                                  accent,
+                                ),
+                                const Spacer(),
+                                Icon(
+                                  _expanded
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
+                                  color: C.textMuted,
+                                  size: 20,
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (_expanded) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                child: const Divider(height: 1, color: C.border),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _metaItem('Prep', r.prepTime, Icons.access_time, accent),
-                    Container(width: 1, height: 30, color: C.border),
-                    _metaItem(
-                      'Cook',
-                      r.cookTime,
-                      Icons.local_fire_department_outlined,
-                      accent,
-                    ),
-                    Container(width: 1, height: 30, color: C.border),
-                    _metaItem(
-                      'Serves',
-                      '${r.servings}',
-                      Icons.people_outline,
-                      accent,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                child: Text(
-                  'Ingredients',
-                  style: T.label.copyWith(color: accent),
+              if (_expanded) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                  child: const Divider(height: 1, color: C.border),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Column(
-                  children: r.ingredients
-                      .map(
-                        (i) => Padding(
-                          padding: const EdgeInsets.only(bottom: 5),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                margin: const EdgeInsets.only(top: 6),
-                                width: 5,
-                                height: 5,
-                                decoration: BoxDecoration(
-                                  color: accent,
-                                  shape: BoxShape.circle,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _metaItem('Prep', r.prepTime, Icons.access_time, accent),
+                      Container(width: 1, height: 30, color: C.border),
+                      _metaItem(
+                        'Cook',
+                        r.cookTime,
+                        Icons.local_fire_department_outlined,
+                        accent,
+                      ),
+                      Container(width: 1, height: 30, color: C.border),
+                      _metaItem(
+                        'Serves',
+                        '${r.servings}',
+                        Icons.people_outline,
+                        accent,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                  child: Text(
+                    'Ingredients',
+                    style: T.label.copyWith(color: accent),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Column(
+                    children: r.ingredients
+                        .map(
+                          (i) => Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(top: 7),
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: accent,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(child: Text(i, style: T.body)),
-                            ],
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(i, style: T.body)),
+                              ],
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(),
+                        )
+                        .toList(),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                child: Text('Steps', style: T.label.copyWith(color: accent)),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Column(
-                  children: r.steps
-                      .asMap()
-                      .entries
-                      .map(
-                        (e) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 22,
-                                height: 22,
-                                decoration: BoxDecoration(
-                                  color: accent,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${e.key + 1}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  child: Text('Steps', style: T.label.copyWith(color: accent)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    children: r.steps
+                        .asMap()
+                        .entries
+                        .map(
+                          (e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: accent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${e.key + 1}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 3),
-                                  child: Text(e.value, style: T.body),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 3),
+                                    child: Text(e.value, style: T.body),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(),
+                        )
+                        .toList(),
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -6119,8 +7639,10 @@ class _ExpandableRecipeCardState extends State<_ExpandableRecipeCard> {
       ],
     ),
   );
+
   Widget _metaItem(String label, String value, IconData icon, Color color) =>
       Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(height: 2),
