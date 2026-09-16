@@ -1,8 +1,9 @@
-// lib/main.dart — Doma Camote Classifier (UI v25.1)
-// Changes vs v25:
-//   • Scan Page Action Bar: Changed the horizontal background bar from dark green
-//     to white/off-white. Adjusted text and icon colors for visibility.
-//   • Kept the circular buttons for Gallery/Flip with a soft gray background.
+// lib/main.dart — Doma Camote Classifier (UI v25.6)
+// Changes vs v25.5:
+//   • Reverted UI colors to the original green theme.
+//   • Updated the logo to the new green camote image (assets/images/logo.png).
+//   • Analyzing overlay remains 100% opaque (solid white background).
+//   • Fixed all 'num' to 'double' compile errors.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -39,7 +40,7 @@ void main() async {
 }
 
 // ============================================================================
-// DESIGN TOKENS
+// DESIGN TOKENS (Original Green Theme)
 // ============================================================================
 
 class C {
@@ -53,7 +54,7 @@ class C {
 
   static const bg = Color(0xFFF5F7F8);
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceDim = Color(0xFFF0F2F5); // For off-white buttons
+  static const surfaceDim = Color(0xFFF0F2F5);
 
   static const border = Color(0xFFE6EBEF);
   static const borderMid = Color(0xFFCBD2D9);
@@ -159,21 +160,6 @@ Color _accent(String cls) {
       return const Color(0xFFE05A17);
     default:
       return C.primary;
-  }
-}
-
-IconData _varietyIcon(String cls) {
-  switch (cls.toLowerCase()) {
-    case 'kadulaw':
-      return Icons.eco;
-    case 'minamon':
-      return Icons.spa;
-    case 'kadabaw':
-      return Icons.grass;
-    case 'tapol':
-      return Icons.local_florist;
-    default:
-      return Icons.eco;
   }
 }
 
@@ -287,8 +273,7 @@ const List<CamoteVariety> camoteVarieties = [
     shape: 'Elongated / Fusiform',
     texture: 'Smooth / Firm',
     imagePath: 'assets/images/orange_camote.jpg',
-    description:
-        'Light-orange to peach skin with vibrant deep-orange flesh. '
+    description: 'Light-orange to peach skin with vibrant deep-orange flesh. '
         'The variety highest in beta-carotene, important for vision, '
         'immune function, and skin health.',
     benefits: [
@@ -454,7 +439,6 @@ const List<CamoteVariety> camoteVarieties = [
       ],
     ),
   ),
-
   CamoteVariety(
     name: 'Minamon',
     commonName: 'Yellow Sweet Potato',
@@ -629,7 +613,6 @@ const List<CamoteVariety> camoteVarieties = [
       ],
     ),
   ),
-
   CamoteVariety(
     name: 'Tapol',
     commonName: 'White Sweet Potato',
@@ -804,7 +787,6 @@ const List<CamoteVariety> camoteVarieties = [
       ],
     ),
   ),
-
   CamoteVariety(
     name: 'Kadabaw',
     commonName: 'Violet Sweet Potato',
@@ -1016,21 +998,21 @@ class DetectionResult {
     required this.height,
   });
   Map<String, dynamic> toJson() => {
-    'className': className,
-    'confidence': confidence,
-    'x': x,
-    'y': y,
-    'width': width,
-    'height': height,
-  };
+        'className': className,
+        'confidence': confidence,
+        'x': x,
+        'y': y,
+        'width': width,
+        'height': height,
+      };
   factory DetectionResult.fromJson(Map<String, dynamic> j) => DetectionResult(
-    className: j['className'],
-    confidence: j['confidence'],
-    x: j['x'],
-    y: j['y'],
-    width: j['width'],
-    height: j['height'],
-  );
+        className: j['className'],
+        confidence: j['confidence'],
+        x: j['x'],
+        y: j['y'],
+        width: j['width'],
+        height: j['height'],
+      );
 }
 
 class DetectionLog {
@@ -1044,19 +1026,19 @@ class DetectionLog {
     required this.timestamp,
   });
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'imagePath': imagePath,
-    'results': results.map((r) => r.toJson()).toList(),
-    'timestamp': timestamp.toIso8601String(),
-  };
+        'id': id,
+        'imagePath': imagePath,
+        'results': results.map((r) => r.toJson()).toList(),
+        'timestamp': timestamp.toIso8601String(),
+      };
   factory DetectionLog.fromJson(Map<String, dynamic> j) => DetectionLog(
-    id: j['id'],
-    imagePath: j['imagePath'],
-    results: (j['results'] as List)
-        .map((r) => DetectionResult.fromJson(r))
-        .toList(),
-    timestamp: DateTime.parse(j['timestamp']),
-  );
+        id: j['id'],
+        imagePath: j['imagePath'],
+        results: (j['results'] as List)
+            .map((r) => DetectionResult.fromJson(r))
+            .toList(),
+        timestamp: DateTime.parse(j['timestamp']),
+      );
 }
 
 class DetectionLogger {
@@ -1162,8 +1144,9 @@ class CamoteClassifier {
       final bytes = await f.readAsBytes();
       if (bytes.isEmpty) return const _ScanResult(state: _ScanState.notFound);
       img.Image? im = img.decodeImage(bytes);
-      if (im == null || im.width < 32 || im.height < 32)
+      if (im == null || im.width < 32 || im.height < 32) {
         return const _ScanResult(state: _ScanState.notFound);
+      }
       im = _enhance(im);
       return _infer(im);
     } catch (e, st) {
@@ -1186,7 +1169,7 @@ class CamoteClassifier {
     }
     double sR = 0, sG = 0, sB = 0;
     int cnt = 0;
-    for (int y = 0; y < p.height; y += 4)
+    for (int y = 0; y < p.height; y += 4) {
       for (int x = 0; x < p.width; x += 4) {
         final px = p.getPixel(x, y);
         sR += px.r.toDouble();
@@ -1194,19 +1177,20 @@ class CamoteClassifier {
         sB += px.b.toDouble();
         cnt++;
       }
+    }
     final avg = (sR + sG + sB) / (cnt * 3.0);
     final bF = avg < 100
         ? 1.04
         : avg > 180
-        ? 1.01
-        : 1.02;
+            ? 1.01
+            : 1.02;
     final cF = avg < 100
         ? 1.10
         : avg > 180
-        ? 1.04
-        : 1.06;
+            ? 1.04
+            : 1.06;
     final out = img.Image(width: p.width, height: p.height);
-    for (int y = 0; y < p.height; y++)
+    for (int y = 0; y < p.height; y++) {
       for (int x = 0; x < p.width; x++) {
         final px = p.getPixel(x, y);
         double r = px.r.toDouble() * bF,
@@ -1219,12 +1203,13 @@ class CamoteClassifier {
           x,
           y,
           img.ColorRgb8(
-            r.clamp(0, 255).round(),
-            g.clamp(0, 255).round(),
-            b.clamp(0, 255).round(),
+            r.clamp(0, 255).toInt(),
+            g.clamp(0, 255).toInt(),
+            b.clamp(0, 255).toInt(),
           ),
         );
       }
+    }
     return out;
   }
 
@@ -1236,7 +1221,7 @@ class CamoteClassifier {
     final pX = ((sz - nW) / 2).floor(), pY = ((sz - nH) / 2).floor();
     const pv = 114.0 / 255.0;
     final inv = 1.0 / sc;
-    for (int y = 0; y < sz; y++)
+    for (int y = 0; y < sz; y++) {
       for (int x = 0; x < sz; x++) {
         final p = (y * sz + x) * 3;
         if (x < pX || x >= pX + nW || y < pY || y >= pY + nH) {
@@ -1249,21 +1234,22 @@ class CamoteClassifier {
           final y0 = math.max(0, math.min(h - 1, (sy - 0.5).floor()));
           final x1 = math.max(0, math.min(w - 1, x0 + 1));
           final y1 = math.max(0, math.min(h - 1, y0 + 1));
-          final fx = (sx - x0 - 0.5).clamp(0.0, 1.0),
-              fy = (sy - y0 - 0.5).clamp(0.0, 1.0);
+          final fx = (sx - x0 - 0.5).clamp(0.0, 1.0).toDouble();
+          final fy = (sy - y0 - 0.5).clamp(0.0, 1.0).toDouble();
           final q00 = im.getPixel(x0, y0), q10 = im.getPixel(x1, y0);
           final q01 = im.getPixel(x0, y1), q11 = im.getPixel(x1, y1);
-          double bi(a, b, c, d) =>
-              (a * (1 - fx) * (1 - fy) +
-                      b * fx * (1 - fy) +
-                      c * (1 - fx) * fy +
-                      d * fx * fy)
-                  .clamp(0, 255);
+          double bi(num a, num b, num c, num d) => (a * (1 - fx) * (1 - fy) +
+                  b * fx * (1 - fy) +
+                  c * (1 - fx) * fy +
+                  d * fx * fy)
+              .clamp(0, 255)
+              .toDouble();
           out[p] = bi(q00.r, q10.r, q01.r, q11.r) / 255.0;
           out[p + 1] = bi(q00.g, q10.g, q01.g, q11.g) / 255.0;
           out[p + 2] = bi(q00.b, q10.b, q01.b, q11.b) / 255.0;
         }
       }
+    }
     return out;
   }
 
@@ -1271,8 +1257,7 @@ class CamoteClassifier {
     final nCls = labels.length;
     final input = _letterbox(image);
     final oShape = _interp!.getOutputTensor(0).shape;
-    final isSimple =
-        oShape.length == 3 &&
+    final isSimple = oShape.length == 3 &&
         (oShape[2] == 6 || (oShape[1] == 6 && oShape[2] > 6));
     final raw = isSimple
         ? _decodeSimple(oShape, input)
@@ -1283,7 +1268,7 @@ class CamoteClassifier {
     final dets = nmsed
         .map(
           (w) => DetectionResult(
-            className: labels[w.cls.clamp(0, labels.length - 1)],
+            className: labels[w.cls.clamp(0, labels.length - 1).toInt()],
             confidence: w.score,
             x: w.box.left,
             y: w.box.top,
@@ -1325,8 +1310,11 @@ class CamoteClassifier {
     List<List<double>> preds;
     if (tr) {
       preds = List.generate(N, (i) => List<double>.filled(CC, 0.0));
-      for (int c = 0; c < CC; c++)
-        for (int n = 0; n < N; n++) preds[n][c] = buf[0][c][n];
+      for (int c = 0; c < CC; c++) {
+        for (int n = 0; n < N; n++) {
+          preds[n][c] = buf[0][c][n];
+        }
+      }
     } else {
       preds = buf[0].cast<List<double>>();
     }
@@ -1362,7 +1350,7 @@ class CamoteClassifier {
       if (raw < _rawGate) continue;
       final score = _cal(raw);
       if (score < _displayGate || x2 <= x1 || y2 <= y1) continue;
-      final cls = row[5].round().clamp(0, labels.length - 1);
+      final cls = row[5].round().clamp(0, labels.length - 1).toInt();
       if (!_boxOk(x1, y1, x2, y2, 1.0)) continue;
       dets.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), cls, score));
     }
@@ -1426,6 +1414,7 @@ class CamoteClassifier {
 
   double _sig(double x) =>
       x >= 0 ? 1.0 / (1.0 + math.exp(-x)) : math.exp(x) / (1.0 + math.exp(x));
+
   double _cal(double s) {
     if (s < 0.70) return s;
     if (s < 0.85) return 0.70 + (s - 0.70) * 1.35;
@@ -1438,10 +1427,10 @@ class CamoteClassifier {
     final pX = (sz - srcW * sc) / 2.0, pY = (sz - srcH * sc) / 2.0;
     final out = <_Det>[];
     for (final d in dets) {
-      final x1 = ((d.box.left - pX) / sc / srcW).clamp(0.0, 1.0);
-      final y1 = ((d.box.top - pY) / sc / srcH).clamp(0.0, 1.0);
-      final x2 = ((d.box.right - pX) / sc / srcW).clamp(0.0, 1.0);
-      final y2 = ((d.box.bottom - pY) / sc / srcH).clamp(0.0, 1.0);
+      final x1 = ((d.box.left - pX) / sc / srcW).clamp(0.0, 1.0).toDouble();
+      final y1 = ((d.box.top - pY) / sc / srcH).clamp(0.0, 1.0).toDouble();
+      final x2 = ((d.box.right - pX) / sc / srcW).clamp(0.0, 1.0).toDouble();
+      final y2 = ((d.box.bottom - pY) / sc / srcH).clamp(0.0, 1.0).toDouble();
       if ((x2 - x1) < 0.01 || (y2 - y1) < 0.01) continue;
       if (!_boxOk(x1, y1, x2, y2, 1.0)) continue;
       out.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), d.cls, d.score));
@@ -1510,17 +1499,16 @@ class _BBPainter extends CustomPainter {
 
     final multi = dets.length > 1;
     final hi = highlight?.toLowerCase();
-    final hasHi =
-        hi != null &&
+    final hasHi = hi != null &&
         dim > 0.001 &&
         dets.any((d) => d.className.toLowerCase() == hi);
 
     Rect rectOf(DetectionResult d) => Rect.fromLTWH(
-      d.x * displayWidth + offsetX,
-      d.y * displayHeight + offsetY,
-      d.width * displayWidth,
-      d.height * displayHeight,
-    );
+          d.x * displayWidth + offsetX,
+          d.y * displayHeight + offsetY,
+          d.width * displayWidth,
+          d.height * displayHeight,
+        );
 
     if (hasHi) {
       canvas.saveLayer(Offset.zero & size, Paint());
@@ -1544,8 +1532,9 @@ class _BBPainter extends CustomPainter {
       final color = isDim ? base.withOpacity(0.28) : base;
       final r = rectOf(d);
 
-      final soloBoost = emphasiseSolo && dets.length == 1 ? 1.4 : 0.0;
-      final strokeW = isHi ? (3.6 + soloBoost) : (multi ? 2.6 : 2.8);
+      final soloBoost = (emphasiseSolo && dets.length == 1) ? 0.5 : 0.0;
+      final strokeW =
+          isHi ? (2.2 + soloBoost) : (multi ? 1.5 : 1.8) + soloBoost;
 
       final boxP = Paint()
         ..color = color
@@ -1556,30 +1545,30 @@ class _BBPainter extends CustomPainter {
         canvas.drawRect(
           r,
           Paint()
-            ..color = base.withOpacity(0.5 * dim)
-            ..strokeWidth = strokeW + 7
+            ..color = base.withOpacity(0.42 * dim)
+            ..strokeWidth = strokeW + 4
             ..style = PaintingStyle.stroke
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
         );
         canvas.drawRect(
           r,
           Paint()
-            ..color = Colors.white.withOpacity(0.65 * dim)
-            ..strokeWidth = 1.3
+            ..color = Colors.white.withOpacity(0.60 * dim)
+            ..strokeWidth = 1.0
             ..style = PaintingStyle.stroke,
         );
       } else {
         canvas.drawRect(
           r,
           Paint()
-            ..color = Colors.black.withOpacity(isDim ? 0.08 : 0.25)
-            ..strokeWidth = strokeW + 2
+            ..color = Colors.black.withOpacity(isDim ? 0.06 : 0.20)
+            ..strokeWidth = strokeW + 1
             ..style = PaintingStyle.stroke,
         );
       }
       canvas.drawRect(r, boxP);
 
-      final labelOpacity = isDim ? 0.22 : 1.0;
+      final labelOpacity = isDim ? 0.25 : 1.0;
       final lbl = multi ? '${i + 1}. ${d.className.cap}' : d.className.cap;
 
       final tp = TextPainter(
@@ -1587,65 +1576,50 @@ class _BBPainter extends CustomPainter {
           text: lbl,
           style: TextStyle(
             color: Colors.white.withOpacity(labelOpacity),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.3,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.25,
+            height: 1.05,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
 
-      const chipRadius = 6.0;
-      const barW = 4.0;
-      const padTop = 5.0;
-      const padBottom = 5.0;
-      const textLeft = 12.0;
-      const padRight = 11.0;
+      const padH = 9.0;
+      const padV = 4.0;
+      final labelH = tp.height + padV * 2;
+      final labelW = tp.width + padH * 2;
 
-      final labelH = tp.height + padTop + padBottom;
-      final labelW = tp.width + textLeft + padRight;
+      final placeAbove = r.top - labelH - 4 >= 0;
 
-      final bool placeAbove = r.top - labelH - 2 >= 0;
       final double labelTop = placeAbove
-          ? r.top - labelH - 2
-          : (r.bottom + 2).clamp(0.0, ch - labelH);
-
-      final double labelLeft = r.left.clamp(0.0, math.max(0.0, cw - labelW));
+          ? r.top - labelH - 4
+          : (r.bottom + 4).clamp(0.0, ch - labelH).toDouble();
+      final double labelLeft =
+          r.left.clamp(0.0, math.max(0.0, cw - labelW)).toDouble();
 
       final bgR = Rect.fromLTWH(labelLeft, labelTop, labelW, labelH);
-      final labelR = RRect.fromRectAndRadius(
-        bgR,
-        const Radius.circular(chipRadius),
-      );
+      final labelR = RRect.fromRectAndRadius(bgR, const Radius.circular(7));
 
       canvas.drawRRect(
-        labelR.shift(const Offset(0, 2)),
-        Paint()..color = Colors.black.withOpacity(0.32 * labelOpacity),
+        labelR.shift(const Offset(0, 1.5)),
+        Paint()..color = Colors.black.withOpacity(0.30 * labelOpacity),
       );
 
-      final chipTint = Color.lerp(const Color(0xFF0E141A), base, 0.14)!;
       canvas.drawRRect(
         labelR,
-        Paint()..color = chipTint.withOpacity(0.94 * labelOpacity),
+        Paint()..color = base.withOpacity(0.96 * labelOpacity),
       );
 
       canvas.save();
       canvas.clipRRect(labelR);
       canvas.drawRect(
-        Rect.fromLTWH(bgR.left, bgR.top, barW, bgR.height),
-        Paint()..color = base.withOpacity(0.95 * labelOpacity),
+        Rect.fromLTWH(bgR.left, bgR.top, bgR.width, 1.2),
+        Paint()..color = Colors.white.withOpacity(0.22 * labelOpacity),
       );
       canvas.restore();
 
-      canvas.save();
-      canvas.clipRRect(labelR);
-      canvas.drawRect(
-        Rect.fromLTWH(bgR.left, bgR.top, bgR.width, 1.0),
-        Paint()..color = Colors.white.withOpacity(0.10 * labelOpacity),
-      );
-      canvas.restore();
-
-      tp.paint(canvas, Offset(bgR.left + textLeft, bgR.top + padTop));
+      tp.paint(canvas, Offset(bgR.left + padH, bgR.top + padV));
     }
   }
 
@@ -1657,26 +1631,6 @@ class _BBPainter extends CustomPainter {
       o.highlight != highlight ||
       o.dim != dim ||
       o.emphasiseSolo != emphasiseSolo;
-}
-
-class _ArcPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawArc(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      -math.pi / 2,
-      math.pi * 1.35,
-      false,
-      Paint()
-        ..color = C.primaryMid
-        ..strokeWidth = 2.5
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ArcPainter o) => false;
 }
 
 class _ScanFramePainter extends CustomPainter {
@@ -1795,22 +1749,22 @@ class _Card extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: padding ?? const EdgeInsets.all(C.paddingCard),
-    decoration: BoxDecoration(
-      color: color ?? C.surface,
-      borderRadius: radius ?? BorderRadius.circular(C.radiusCard),
-      border: Border.all(color: borderColor ?? C.border),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0A000000),
-          blurRadius: 12,
-          offset: Offset(0, 4),
+        width: double.infinity,
+        padding: padding ?? const EdgeInsets.all(C.paddingCard),
+        decoration: BoxDecoration(
+          color: color ?? C.surface,
+          borderRadius: radius ?? BorderRadius.circular(C.radiusCard),
+          border: Border.all(color: borderColor ?? C.border),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
-      ],
-    ),
-    child: child,
-  );
+        child: child,
+      );
 }
 
 class _TappableCard extends StatefulWidget {
@@ -1830,34 +1784,34 @@ class _TappableCardState extends State<_TappableCard> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) => GestureDetector(
-    onTapDown: (_) => setState(() => _pressed = true),
-    onTapUp: (_) {
-      setState(() => _pressed = false);
-      widget.onTap();
-    },
-    onTapCancel: () => setState(() => _pressed = false),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 140),
-      margin: widget.margin,
-      decoration: BoxDecoration(
-        color: _pressed ? C.primaryTint : C.surface,
-        borderRadius: BorderRadius.circular(C.radiusCard),
-        border: Border.all(
-          color: _pressed ? C.primary.withOpacity(0.4) : C.border,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: _pressed
-                ? C.primary.withOpacity(0.1)
-                : const Color(0x0A000000),
-            blurRadius: _pressed ? 14 : 10,
-            offset: const Offset(0, 4),
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          margin: widget.margin,
+          decoration: BoxDecoration(
+            color: _pressed ? C.primaryTint : C.surface,
+            borderRadius: BorderRadius.circular(C.radiusCard),
+            border: Border.all(
+              color: _pressed ? C.primary.withOpacity(0.4) : C.border,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _pressed
+                    ? C.primary.withOpacity(0.1)
+                    : const Color(0x0A000000),
+                blurRadius: _pressed ? 14 : 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: widget.child,
-    ),
-  );
+          child: widget.child,
+        ),
+      );
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -1867,20 +1821,20 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.title, {this.trailing, this.accent});
   @override
   Widget build(BuildContext context) => Row(
-    children: [
-      Container(
-        width: 3,
-        height: 16,
-        decoration: BoxDecoration(
-          color: accent ?? C.primary,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      const SizedBox(width: 9),
-      Expanded(child: Text(title, style: T.heading)),
-      if (trailing != null) trailing!,
-    ],
-  );
+        children: [
+          Container(
+            width: 3,
+            height: 16,
+            decoration: BoxDecoration(
+              color: accent ?? C.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 9),
+          Expanded(child: Text(title, style: T.heading)),
+          if (trailing != null) trailing!,
+        ],
+      );
 }
 
 class _Pill extends StatelessWidget {
@@ -1895,79 +1849,79 @@ class _Pill extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: bg,
-      borderRadius: BorderRadius.circular(C.radiusPill),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: 11, color: fg),
-          const SizedBox(width: 4),
-        ],
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: fg,
-            letterSpacing: 0.1,
-          ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(C.radiusPill),
         ),
-      ],
-    ),
-  );
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 11, color: fg),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: fg,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 Widget _bullet(String text, Color color) => Padding(
-  padding: const EdgeInsets.only(bottom: 8),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Container(
-        margin: const EdgeInsets.only(top: 7),
-        width: 5,
-        height: 5,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 7),
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: T.body.copyWith(color: C.textPrimary)),
+          ),
+        ],
       ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Text(text, style: T.body.copyWith(color: C.textPrimary)),
-      ),
-    ],
-  ),
-);
+    );
 
 Widget _warnItem(String text, Color color, Color bg) => Padding(
-  padding: const EdgeInsets.only(bottom: 8),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Container(
-        margin: const EdgeInsets.only(top: 2),
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: Icon(Icons.priority_high_rounded, size: 9, color: color),
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 12.5,
-            color: color.withOpacity(0.92),
-            height: 1.5,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Icon(Icons.priority_high_rounded, size: 9, color: color),
           ),
-        ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: color.withOpacity(0.92),
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
       ),
-    ],
-  ),
-);
+    );
 
 class _CharRow extends StatelessWidget {
   final IconData icon;
@@ -1975,41 +1929,41 @@ class _CharRow extends StatelessWidget {
   const _CharRow(this.icon, this.label, this.value);
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 10),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: C.primaryTint,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 15, color: C.primary),
-        ),
-        const SizedBox(width: 12),
-        SizedBox(
-          width: 96,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 7),
-            child: Text(label, style: T.label),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 7),
-            child: Text(
-              value,
-              style: T.subhead,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: C.primaryTint,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 15, color: C.primary),
             ),
-          ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 96,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 7),
+                child: Text(label, style: T.label),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 7),
+                child: Text(
+                  value,
+                  style: T.subhead,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 }
 
 // ============================================================================
@@ -2059,9 +2013,9 @@ class _StaggerState extends State<_Stagger>
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-    opacity: _fade,
-    child: SlideTransition(position: _slide, child: widget.child),
-  );
+        opacity: _fade,
+        child: SlideTransition(position: _slide, child: widget.child),
+      );
 }
 
 // ============================================================================
@@ -2086,71 +2040,72 @@ class _ImageCarouselState extends State<_ImageCarousel> {
 
   @override
   Widget build(BuildContext context) => Column(
-    children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(C.radiusCard),
-        child: SizedBox(
-          height: 240,
-          width: double.infinity,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              PageView.builder(
-                controller: _pc,
-                itemCount: widget.imagePaths.length,
-                onPageChanged: (i) => setState(() => _current = i),
-                itemBuilder: (_, i) => Image.asset(
-                  widget.imagePaths[i],
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: C.bg,
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 48,
-                        color: C.textMuted,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(C.radiusCard),
+            child: SizedBox(
+              height: 240,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  PageView.builder(
+                    controller: _pc,
+                    itemCount: widget.imagePaths.length,
+                    onPageChanged: (i) => setState(() => _current = i),
+                    itemBuilder: (_, i) => Image.asset(
+                      widget.imagePaths[i],
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: C.bg,
+                        child: const Center(
+                          child: Icon(
+                            Icons.image_not_supported,
+                            size: 48,
+                            color: C.textMuted,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  Positioned(
+                    bottom: 10,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(widget.imagePaths.length, (i) {
+                        final active = i == _current;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          width: active ? 18 : 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: active
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.55),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ],
               ),
-              Positioned(
-                bottom: 10,
-                left: 0,
-                right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(widget.imagePaths.length, (i) {
-                    final active = i == _current;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      width: active ? 18 : 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: active
-                            ? Colors.white
-                            : Colors.white.withOpacity(0.55),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-    ],
-  );
+        ],
+      );
 }
 
 // ============================================================================
-// ANALYZING OVERLAY
+// ANALYZING OVERLAY  ★ 100% OPACITY ★
 // ============================================================================
 
 class _AnalyzingOverlay extends StatefulWidget {
   const _AnalyzingOverlay();
+
   @override
   State<_AnalyzingOverlay> createState() => _AnalyzingOverlayState();
 }
@@ -2158,148 +2113,216 @@ class _AnalyzingOverlay extends StatefulWidget {
 class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
     with TickerProviderStateMixin {
   late AnimationController _spinCtrl;
-  late AnimationController _pulseCtrl;
-  late AnimationController _fadeInCtrl;
-  late Animation<double> _pulseAnim;
-  late Animation<double> _fadeIn;
+  late AnimationController _fadeCtrl;
+  late AnimationController _progressCtrl;
+  late Animation<double> _fade;
 
-  int _dotCount = 0;
+  int _dots = 0;
   Timer? _dotTimer;
 
   @override
   void initState() {
     super.initState();
+
     _spinCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 1100),
     )..repeat();
-    _pulseCtrl = AnimationController(
+
+    _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-    _fadeInCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 260),
     )..forward();
 
-    _pulseAnim = Tween<double>(
-      begin: 0.9,
-      end: 1.1,
-    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
-    _fadeIn = CurvedAnimation(parent: _fadeInCtrl, curve: Curves.easeOut);
+    _progressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
 
-    _dotTimer = Timer.periodic(const Duration(milliseconds: 420), (_) {
-      if (mounted) setState(() => _dotCount = (_dotCount + 1) % 4);
+    _fade = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+
+    _dotTimer = Timer.periodic(const Duration(milliseconds: 400), (_) {
+      if (mounted) setState(() => _dots = (_dots + 1) % 4);
     });
   }
 
   @override
   void dispose() {
     _spinCtrl.dispose();
-    _pulseCtrl.dispose();
-    _fadeInCtrl.dispose();
+    _fadeCtrl.dispose();
+    _progressCtrl.dispose();
     _dotTimer?.cancel();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => Positioned.fill(
-    child: FadeTransition(
-      opacity: _fadeIn,
-      child: Container(
-        color: Colors.black.withOpacity(0.85),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Modern dual-ring loading animation
-              AnimatedBuilder(
-                animation: _pulseAnim,
-                builder: (_, child) =>
-                    Transform.scale(scale: _pulseAnim.value, child: child),
-                child: SizedBox(
-                  width: 80,
-                  height: 80,
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: FadeTransition(
+        opacity: _fade,
+        child: Material(
+          color: Colors.white, // 100% opaque white background
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Spinner with the new Logo inside ──
+                SizedBox(
+                  width: 120,
+                  height: 120,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Outer ring
+                      // Track ring
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 120,
+                        height: 120,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: C.primaryMid.withOpacity(0.15),
-                            width: 2,
+                            color: C.primaryLight,
+                            width: 4,
                           ),
                         ),
                       ),
-                      // Rotating ring
+                      // Rotating arc
                       AnimatedBuilder(
                         animation: _spinCtrl,
                         builder: (_, __) => Transform.rotate(
                           angle: _spinCtrl.value * 2 * math.pi,
-                          child: Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: C.primaryMid,
-                                width: 3,
-                                strokeAlign: BorderSide.strokeAlignOutside,
-                              ),
+                          child: CustomPaint(
+                            size: const Size(120, 120),
+                            painter: const _SpinnerArcPainter(
+                              color: C.primary,
                             ),
                           ),
                         ),
                       ),
-                      // Center glowing dot
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: C.primaryMid,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: C.primaryMid.withOpacity(0.8),
-                              blurRadius: 15,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
+                      // Center Logo
+                      Image.asset(
+                        'assets/images/logo.png',
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.contain,
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 28),
-              // Better typography
-              const Text(
-                'Analyzing',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+                const SizedBox(height: 32),
+
+                // ── Title with cycling dots ──
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    const Text(
+                      'Analyzing',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: C.textPrimary,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Text(
+                      '.' * _dots,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: C.primary,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Identifying camote variety...',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
-                  fontSize: 13,
-                  letterSpacing: 0.2,
+                const SizedBox(height: 8),
+
+                // ── Subtitle ──
+                const Text(
+                  'Identifying camote variety',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: C.textSec,
+                    height: 1.4,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 40),
+
+                // ── Thin indeterminate progress bar ──
+                SizedBox(
+                  width: 200,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: SizedBox(
+                      height: 5,
+                      child: AnimatedBuilder(
+                        animation: _progressCtrl,
+                        builder: (_, __) => Stack(
+                          children: [
+                            Container(color: C.primaryLight),
+                            Positioned.fill(
+                              child: FractionallySizedBox(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: 0.35,
+                                child: Transform.translate(
+                                  offset: Offset(
+                                    _progressCtrl.value * 140,
+                                    0,
+                                  ),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          C.primaryLight,
+                                          C.primary,
+                                          C.primaryLight,
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+class _SpinnerArcPainter extends CustomPainter {
+  final Color color;
+  const _SpinnerArcPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromCircle(
+      center: Offset(size.width / 2, size.height / 2),
+      radius: (size.width / 2) - 2,
+    );
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 4
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(rect, -math.pi / 2, math.pi * 0.66, false, paint);
+  }
+
+  @override
+  bool shouldRepaint(_SpinnerArcPainter o) => o.color != color;
 }
 
 // ============================================================================
@@ -2310,42 +2333,48 @@ PreferredSizeWidget _appBar(
   String title, {
   List<Widget>? actions,
   Widget? leading,
-}) => AppBar(
-  backgroundColor: C.surface,
-  surfaceTintColor: C.surface,
-  scrolledUnderElevation: 0.5,
-  elevation: 0,
-  shadowColor: C.border,
-  leading: leading,
-  titleSpacing: leading == null ? null : 0,
-  title: Row(
-    children: [
-      Container(
-        padding: const EdgeInsets.all(7),
-        decoration: BoxDecoration(
-          color: C.primaryLight,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Icon(Icons.eco, color: C.primary, size: 20),
+}) =>
+    AppBar(
+      backgroundColor: C.surface,
+      surfaceTintColor: C.surface,
+      scrolledUnderElevation: 0.5,
+      elevation: 0,
+      shadowColor: C.border,
+      leading: leading,
+      titleSpacing: leading == null ? null : 0,
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: C.primaryLight,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 22,
+              height: 22,
+              fit: BoxFit.contain,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: C.textPrimary,
+              letterSpacing: -0.3,
+            ),
+          ),
+        ],
       ),
-      const SizedBox(width: 10),
-      Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          color: C.textPrimary,
-          letterSpacing: -0.3,
-        ),
+      actions: actions,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(height: 1, color: C.border),
       ),
-    ],
-  ),
-  actions: actions,
-  bottom: PreferredSize(
-    preferredSize: const Size.fromHeight(1),
-    child: Container(height: 1, color: C.border),
-  ),
-);
+    );
 
 // ============================================================================
 // APP ROOT
@@ -2355,28 +2384,28 @@ class DomaApp extends StatelessWidget {
   const DomaApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Doma – Camote Classifier',
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      primarySwatch: Colors.green,
-      scaffoldBackgroundColor: C.bg,
-      fontFamily: 'Roboto',
-      scrollbarTheme: ScrollbarThemeData(
-        thumbColor: WidgetStateProperty.all(C.primary.withOpacity(0.55)),
-        trackColor: WidgetStateProperty.all(C.primary.withOpacity(0.08)),
-        radius: const Radius.circular(10),
-        thickness: WidgetStateProperty.all(6),
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: C.surface,
-        foregroundColor: C.textPrimary,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: C.surface,
-      ),
-    ),
-    home: const SplashScreen(),
-  );
+        title: 'Doma – Camote Classifier',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          primarySwatch: Colors.green,
+          scaffoldBackgroundColor: C.bg,
+          fontFamily: 'Roboto',
+          scrollbarTheme: ScrollbarThemeData(
+            thumbColor: WidgetStateProperty.all(C.primary.withOpacity(0.55)),
+            trackColor: WidgetStateProperty.all(C.primary.withOpacity(0.08)),
+            radius: const Radius.circular(10),
+            thickness: WidgetStateProperty.all(6),
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: C.surface,
+            foregroundColor: C.textPrimary,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            surfaceTintColor: C.surface,
+          ),
+        ),
+        home: const SplashScreen(),
+      );
 }
 
 // ============================================================================
@@ -2426,71 +2455,76 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: C.surface,
-    body: Stack(
-      children: [
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ScaleTransition(
-                scale: _scale,
-                child: FadeTransition(
-                  opacity: _fade,
-                  child: const Icon(Icons.eco, color: C.primary, size: 72),
-                ),
-              ),
-              const SizedBox(height: 8),
-              FadeTransition(
-                opacity: _fade,
-                child: const Text(
-                  'Doma App',
-                  style: TextStyle(
-                    color: C.primary,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.6,
+        backgroundColor: C.surface,
+        body: Stack(
+          children: [
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ScaleTransition(
+                    scale: _scale,
+                    child: FadeTransition(
+                      opacity: _fade,
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 140,
+                        height: 140,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              FadeTransition(
-                opacity: _fade,
-                child: Text(
-                  'Camote Classifier',
-                  style: TextStyle(
-                    color: C.primary.withOpacity(0.7),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.4,
+                  const SizedBox(height: 16),
+                  FadeTransition(
+                    opacity: _fade,
+                    child: const Text(
+                      'Doma App',
+                      style: TextStyle(
+                        color: C.primary,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.6,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 2),
+                  FadeTransition(
+                    opacity: _fade,
+                    child: Text(
+                      'Camote Classifier',
+                      style: TextStyle(
+                        color: C.primary.withOpacity(0.7),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 64,
-          child: FadeTransition(
-            opacity: _fade,
-            child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: C.primary.withOpacity(0.85),
-                  backgroundColor: C.primary.withOpacity(0.12),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 64,
+              child: FadeTransition(
+                opacity: _fade,
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: C.primary.withOpacity(0.85),
+                      backgroundColor: C.primary.withOpacity(0.12),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 }
 
 class TimeFormatter {
@@ -2567,8 +2601,8 @@ class _MainNavigationState extends State<MainNavigation> {
   void initState() {
     super.initState();
     _cls.loadModel().catchError(
-      (e) => debugPrint('[Doma] model load failed: $e'),
-    );
+          (e) => debugPrint('[Doma] model load failed: $e'),
+        );
   }
 
   @override
@@ -2651,74 +2685,74 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      color: C.surface,
-      border: Border(top: BorderSide(color: C.border)),
-    ),
-    child: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(_items.length, (i) {
-            final sel = currentIndex == i;
-            final item = _items[i];
-            return GestureDetector(
-              onTap: () => onTap(i),
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: sel ? C.primaryLight : Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: sel
-                        ? C.primary.withOpacity(0.22)
-                        : Colors.transparent,
-                    width: 1,
-                  ),
-                  boxShadow: sel
-                      ? [
-                          BoxShadow(
-                            color: C.primary.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      sel ? item.$2 : item.$1,
-                      color: sel ? C.primary : C.textMuted,
-                      size: 22,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      item.$3,
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                        color: sel ? C.primary : C.textMuted,
-                        letterSpacing: 0.1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
+        decoration: const BoxDecoration(
+          color: C.surface,
+          border: Border(top: BorderSide(color: C.border)),
         ),
-      ),
-    ),
-  );
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(_items.length, (i) {
+                final sel = currentIndex == i;
+                final item = _items[i];
+                return GestureDetector(
+                  onTap: () => onTap(i),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: sel ? C.primaryLight : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: sel
+                            ? C.primary.withOpacity(0.22)
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                      boxShadow: sel
+                          ? [
+                              BoxShadow(
+                                color: C.primary.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          sel ? item.$2 : item.$1,
+                          color: sel ? C.primary : C.textMuted,
+                          size: 22,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          item.$3,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                            color: sel ? C.primary : C.textMuted,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      );
 }
 
 // ============================================================================
@@ -2983,122 +3017,125 @@ class _ScanPageState extends State<ScanPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: C.primaryDeep,
-      appBar: _appBar(
-        'Scan',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu_book_outlined),
-            color: C.textSec,
-            tooltip: 'How to Use',
-            onPressed: () => _showDlg(const _HowToDlg()),
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: C.primaryDeep,
+          appBar: _appBar(
+            'Scan',
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.menu_book_outlined),
+                color: C.textSec,
+                tooltip: 'How to Use',
+                onPressed: () => _showDlg(const _HowToDlg()),
+              ),
+              IconButton(
+                icon: const Icon(Icons.info_outline),
+                color: C.textSec,
+                tooltip: 'About',
+                onPressed: () => _showDlg(const _AboutDlg()),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            color: C.textSec,
-            tooltip: 'About',
-            onPressed: () => _showDlg(const _AboutDlg()),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (_previewFile != null && !_busy)
-                  Image.file(_previewFile!, fit: BoxFit.cover)
-                else
-                  _camView(),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 160,
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.55),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: 220,
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.65),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (!_busy && _camReady && _camErr == null)
-                  AnimatedBuilder(
-                    animation: _frameAnim,
-                    builder: (_, __) => Positioned.fill(
-                      child: CustomPaint(
-                        painter: _ScanFramePainter(pulse: _frameAnim.value),
-                      ),
-                    ),
-                  ),
-                if (!_busy && _camReady && _camErr == null)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 220,
-                    child: IgnorePointer(
-                      child: Center(
-                        child: Text(
-                          'Fit the camote inside the frame',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.75),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.3,
-                            shadows: const [
-                              Shadow(color: Colors.black54, blurRadius: 6),
-                            ],
+          body: Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (_previewFile != null && !_busy)
+                      Image.file(_previewFile!, fit: BoxFit.cover)
+                    else
+                      _camView(),
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 160,
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.55),
+                                Colors.transparent,
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                if (_busy) const _AnalyzingOverlay(),
-              ],
-            ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: 220,
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.65),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (!_busy && _camReady && _camErr == null)
+                      AnimatedBuilder(
+                        animation: _frameAnim,
+                        builder: (_, __) => Positioned.fill(
+                          child: CustomPaint(
+                            painter: _ScanFramePainter(pulse: _frameAnim.value),
+                          ),
+                        ),
+                      ),
+                    if (!_busy && _camReady && _camErr == null)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 220,
+                        child: IgnorePointer(
+                          child: Center(
+                            child: Text(
+                              'Fit the camote inside the frame',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.75),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.3,
+                                shadows: const [
+                                  Shadow(color: Colors.black54, blurRadius: 6),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              _buildActionBar(),
+            ],
           ),
-          _buildActionBar(),
-        ],
-      ),
+        ),
+        if (_busy) const _AnalyzingOverlay(),
+      ],
     );
   }
 
-  // ── Action bar with white/gray background ──
   Widget _buildActionBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
       decoration: BoxDecoration(
-        color: C.surface, // White background
+        color: C.surface,
         border: Border(top: BorderSide(color: C.border, width: 1)),
       ),
       child: SafeArea(
@@ -3125,7 +3162,6 @@ class _ScanPageState extends State<ScanPage>
   }
 }
 
-// ── Scan action button (gallery / flip) ─────────────────────────────────────
 class _ScanAction extends StatefulWidget {
   final IconData icon;
   final String label;
@@ -3161,9 +3197,7 @@ class _ScanActionState extends State<_ScanAction> {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: _pressed
-                  ? C.primary.withOpacity(0.1)
-                  : C.bg, // Light gray background
+              color: _pressed ? C.primary.withOpacity(0.1) : C.bg,
               shape: BoxShape.circle,
               border: Border.all(
                 color: _pressed ? C.primary : C.borderMid,
@@ -3206,7 +3240,6 @@ class _ScanActionState extends State<_ScanAction> {
   }
 }
 
-// ── Big capture button with glow ring ───────────────────────────────────────
 class _CaptureButton extends StatefulWidget {
   final bool busy;
   final VoidCallback? onTap;
@@ -3295,235 +3328,247 @@ class _WhiteDlg extends StatelessWidget {
   const _WhiteDlg({required this.child});
   @override
   Widget build(BuildContext context) => Dialog(
-    backgroundColor: C.surface,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-    insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-    child: child,
-  );
+        backgroundColor: C.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: child,
+      );
 }
 
 Widget _dlgBtn(
   String label, {
   required VoidCallback onTap,
   Color bg = C.primary,
-}) => SizedBox(
-  width: double.infinity,
-  child: ElevatedButton(
-    onPressed: onTap,
-    style: ElevatedButton.styleFrom(
-      backgroundColor: bg,
-      foregroundColor: C.white,
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-    ),
-    child: Text(
-      label,
-      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-    ),
-  ),
-);
+}) =>
+    SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bg,
+          foregroundColor: C.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          elevation: 0,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
 
 class _NoCamoteDlg extends StatelessWidget {
   const _NoCamoteDlg();
   @override
   Widget build(BuildContext context) => _WhiteDlg(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: C.errLight,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.search_off_rounded, color: C.err, size: 32),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: C.errLight,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.search_off_rounded,
+                    color: C.err, size: 32),
+              ),
+              const SizedBox(height: 18),
+              Text('No Camote Detected', style: T.title),
+              const SizedBox(height: 8),
+              Text(
+                'Make sure it is well-lit and centred in frame.',
+                textAlign: TextAlign.center,
+                style: T.body,
+              ),
+              const SizedBox(height: 24),
+              _dlgBtn('Try Again', onTap: () => Navigator.pop(context)),
+            ],
           ),
-          const SizedBox(height: 18),
-          Text('No Camote Detected', style: T.title),
-          const SizedBox(height: 8),
-          Text(
-            'Make sure it is well-lit and centred in frame.',
-            textAlign: TextAlign.center,
-            style: T.body,
-          ),
-          const SizedBox(height: 24),
-          _dlgBtn('Try Again', onTap: () => Navigator.pop(context)),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 class _HowToDlg extends StatelessWidget {
   const _HowToDlg();
   @override
   Widget build(BuildContext context) => _WhiteDlg(
-    child: ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.75,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.75,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: C.primaryLight,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.menu_book_outlined,
-                    color: C.primary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text('How to Use', style: T.title),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: C.bg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: C.border),
-                    ),
-                    child: const Icon(Icons.close, size: 16, color: C.textSec),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
+                Row(
                   children: [
-                    _step(
-                      1,
-                      'Place one or more camote',
-                      'Keep them apart on a plain surface.',
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: C.primaryLight,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 22,
+                        height: 22,
+                        fit: BoxFit.contain,
+                      ),
                     ),
-                    _step(
-                      2,
-                      'Capture or choose',
-                      'Use the shutter or gallery.',
+                    const SizedBox(width: 12),
+                    Text('How to Use', style: T.title),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: C.bg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: C.border),
+                        ),
+                        child:
+                            const Icon(Icons.close, size: 16, color: C.textSec),
+                      ),
                     ),
-                    _step(
-                      3,
-                      'AI analysis',
-                      'Every camote is identified automatically.',
-                    ),
-                    _step(
-                      4,
-                      'View results',
-                      'Tap a camote or swipe to spotlight it.',
-                    ),
-                    _step(5, 'History & Library', 'Review past scans anytime.'),
                   ],
                 ),
+                const SizedBox(height: 24),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _step(
+                          1,
+                          'Place one or more camote',
+                          'Keep them apart on a plain surface.',
+                        ),
+                        _step(
+                          2,
+                          'Capture or choose',
+                          'Use the shutter or gallery.',
+                        ),
+                        _step(
+                          3,
+                          'AI analysis',
+                          'Every camote is identified automatically.',
+                        ),
+                        _step(
+                          4,
+                          'View results',
+                          'Tap a camote or swipe to spotlight it.',
+                        ),
+                        _step(5, 'History & Library',
+                            'Review past scans anytime.'),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _dlgBtn('Got It', onTap: () => Navigator.pop(context)),
+              ],
+            ),
+          ),
+        ),
+      );
+  Widget _step(int n, String t, String d) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: const BoxDecoration(
+                color: C.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '$n',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            _dlgBtn('Got It', onTap: () => Navigator.pop(context)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(t, style: T.subhead),
+                  const SizedBox(height: 2),
+                  Text(d, style: T.body),
+                ],
+              ),
+            ),
           ],
         ),
-      ),
-    ),
-  );
-  Widget _step(int n, String t, String d) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          decoration: const BoxDecoration(
-            color: C.primary,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '$n',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(t, style: T.subhead),
-              const SizedBox(height: 2),
-              Text(d, style: T.body),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 }
 
 class _AboutDlg extends StatelessWidget {
   const _AboutDlg();
   @override
   Widget build(BuildContext context) => _WhiteDlg(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: C.primaryLight,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.eco, color: C.primary, size: 36),
-          ),
-          const SizedBox(height: 16),
-          Text('Doma', style: T.display),
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: C.primaryLight,
-              borderRadius: BorderRadius.circular(C.radiusPill),
-            ),
-            child: const Text(
-              'Version 1.0',
-              style: TextStyle(
-                fontSize: 12,
-                color: C.primary,
-                fontWeight: FontWeight.w700,
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: C.primaryLight,
+                  shape: BoxShape.circle,
+                ),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.contain,
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              Text('Doma', style: T.display),
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                decoration: BoxDecoration(
+                  color: C.primaryLight,
+                  borderRadius: BorderRadius.circular(C.radiusPill),
+                ),
+                child: const Text(
+                  'Version 1.0',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: C.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Identifies camote varieties grown in Tacloban City, Leyte.',
+                textAlign: TextAlign.center,
+                style: T.body,
+              ),
+              const SizedBox(height: 24),
+              _dlgBtn('Close', onTap: () => Navigator.pop(context)),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            'Identifies camote varieties grown in Tacloban City, Leyte.',
-            textAlign: TextAlign.center,
-            style: T.body,
-          ),
-          const SizedBox(height: 24),
-          _dlgBtn('Close', onTap: () => Navigator.pop(context)),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 // ============================================================================
@@ -3655,39 +3700,41 @@ class _ResultsPageState extends State<ResultsPage>
       : null;
 
   Widget _saveBar() => SafeArea(
-    top: false,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-      child: SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: ElevatedButton.icon(
-          onPressed: _saved ? null : _saveDetection,
-          icon: Icon(
-            _saved ? Icons.check_circle_rounded : Icons.bookmark_add_outlined,
-            size: 20,
-          ),
-          label: Text(_saved ? 'Saved to Detections' : 'Save Detection'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: C.primary,
-            foregroundColor: C.white,
-            disabledBackgroundColor: C.primaryLight,
-            disabledForegroundColor: C.primary,
-            elevation: 6,
-            shadowColor: C.primary.withOpacity(0.35),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+          child: SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton.icon(
+              onPressed: _saved ? null : _saveDetection,
+              icon: Icon(
+                _saved
+                    ? Icons.check_circle_rounded
+                    : Icons.bookmark_add_outlined,
+                size: 20,
+              ),
+              label: Text(_saved ? 'Saved to Detections' : 'Save Detection'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: C.primary,
+                foregroundColor: C.white,
+                disabledBackgroundColor: C.primaryLight,
+                disabledForegroundColor: C.primary,
+                elevation: 6,
+                shadowColor: C.primary.withOpacity(0.35),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
             ),
           ),
         ),
-      ),
-    ),
-  );
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -3732,8 +3779,8 @@ class _ResultsPageState extends State<ResultsPage>
 
     final selectedClass =
         (_selectedClass != null && uniqueClasses.contains(_selectedClass))
-        ? _selectedClass!
-        : uniqueClasses.first;
+            ? _selectedClass!
+            : uniqueClasses.first;
 
     final top = grouped[selectedClass]!.first;
     final variety = _v(top.className);
@@ -3904,7 +3951,6 @@ class _ResultsPageState extends State<ResultsPage>
   }
 }
 
-// ── Hero image with TAP-TO-SELECT + swipe gesture + dots ────────────────────
 class _HeroImage extends StatefulWidget {
   final String imagePath;
   final List<DetectionResult> dets;
@@ -3987,8 +4033,6 @@ class _HeroImageState extends State<_HeroImage>
     widget.onSelect?.call(widget.classes[next]);
   }
 
-  /// Convert a tap position (local to the hero widget) into a variety
-  /// selection by hit-testing the detection boxes in display space.
   void _handleTap(Offset local, double cw, double ch) {
     if (widget.dets.isEmpty) return;
     final iw = widget.imageWidth ?? 1.0;
@@ -3999,7 +4043,6 @@ class _HeroImageState extends State<_HeroImage>
     final offsetX = (cw - displayWidth) / 2;
     final offsetY = (ch - displayHeight) / 2;
 
-    // Iterate topmost first so the most recently drawn box wins.
     for (int i = widget.dets.length - 1; i >= 0; i--) {
       final d = widget.dets[i];
       final rect = Rect.fromLTWH(
@@ -4008,7 +4051,6 @@ class _HeroImageState extends State<_HeroImage>
         d.width * displayWidth,
         d.height * displayHeight,
       );
-      // Add slop for easier tapping.
       if (rect.inflate(10).contains(local)) {
         final cls = d.className.toLowerCase();
         if (cls != widget.selectedClass) {
@@ -4037,7 +4079,7 @@ class _HeroImageState extends State<_HeroImage>
 
     final hasDims = widget.imageWidth != null && widget.imageHeight != null;
     final aspect = hasDims
-        ? (widget.imageWidth! / widget.imageHeight!).clamp(0.6, 1.6)
+        ? (widget.imageWidth! / widget.imageHeight!).clamp(0.6, 1.6).toDouble()
         : 4.0 / 3.0;
 
     final String badgeText;
@@ -4062,7 +4104,6 @@ class _HeroImageState extends State<_HeroImage>
 
     return Column(
       children: [
-        // ── LayoutBuilder gives us the render size for tap hit-testing ──
         LayoutBuilder(
           builder: (context, constraints) {
             final cw = constraints.maxWidth;
@@ -4172,7 +4213,6 @@ class _HeroImageState extends State<_HeroImage>
   }
 }
 
-// ── Dots indicator ───────────────────────────────────────────────────────────
 class _Dots extends StatelessWidget {
   final int current;
   final List<String> classes;
@@ -4180,35 +4220,34 @@ class _Dots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: classes.asMap().entries.map((e) {
-      final active = e.key == current;
-      final color = _accent(e.value);
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        width: active ? 24 : 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: active ? color : C.border,
-          borderRadius: BorderRadius.circular(4),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.35),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: classes.asMap().entries.map((e) {
+          final active = e.key == current;
+          final color = _accent(e.value);
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            width: active ? 24 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: active ? color : C.border,
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: color.withOpacity(0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+          );
+        }).toList(),
       );
-    }).toList(),
-  );
 }
 
-// ── Summary card ─────────────────────────────────────────────────────────────
 class _DetectionSummaryCard extends StatelessWidget {
   final int totalCount;
   final int variantCount;
@@ -4219,56 +4258,55 @@ class _DetectionSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Card(
-    child: Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [C.primaryMid, C.primary],
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [C.primaryMid, C.primary],
+                ),
+                borderRadius: BorderRadius.circular(11),
+                boxShadow: [
+                  BoxShadow(
+                    color: C.primary.withOpacity(0.28),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.center_focus_strong_outlined,
+                color: Colors.white,
+                size: 18,
+              ),
             ),
-            borderRadius: BorderRadius.circular(11),
-            boxShadow: [
-              BoxShadow(
-                color: C.primary.withOpacity(0.28),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$totalCount Camote${totalCount == 1 ? "" : "s"} Detected',
+                    style: T.title,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    variantCount > 1
+                        ? '$variantCount varieties found'
+                        : 'Analysis complete',
+                    style: T.caption,
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: const Icon(
-            Icons.center_focus_strong_outlined,
-            color: Colors.white,
-            size: 18,
-          ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$totalCount Camote${totalCount == 1 ? "" : "s"} Detected',
-                style: T.title,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                variantCount > 1
-                    ? '$variantCount varieties found'
-                    : 'Analysis complete',
-                style: T.caption,
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 }
 
-// ── Identity card ────────────────────────────────────────────────────────────
 class _IdentityCard extends StatelessWidget {
   final DetectionResult top;
   final CamoteVariety? variety;
@@ -4282,190 +4320,190 @@ class _IdentityCard extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => _Card(
-    child: Row(
-      children: [
-        Container(
-          width: 54,
-          height: 54,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                accentColor,
-                Color.lerp(accentColor, Colors.black, 0.25)!,
-              ],
-            ),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: accentColor.withOpacity(0.32),
-                blurRadius: 14,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(variety?.name ?? top.className.cap, style: T.display),
-              if (variety != null)
-                Text(
-                  variety!.commonName,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: accentColor,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.05,
-                  ),
-                ),
-            ],
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              width: 54,
+              height: 54,
               decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(C.radiusPill),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle, size: 12, color: accentColor),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Detected',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: accentColor,
-                      letterSpacing: 0.1,
-                    ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    accentColor,
+                    Color.lerp(accentColor, Colors.black, 0.25)!,
+                  ],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: accentColor.withOpacity(0.32),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
             ),
-            if (count > 1) ...[
-              const SizedBox(height: 6),
-              Text(
-                '$count instances',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  color: accentColor.withOpacity(0.85),
-                ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(variety?.name ?? top.className.cap, style: T.display),
+                  if (variety != null)
+                    Text(
+                      variety!.commonName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: accentColor,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.05,
+                      ),
+                    ),
+                ],
               ),
-            ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(C.radiusPill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, size: 12, color: accentColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Detected',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: accentColor,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (count > 1) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '$count instances',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: accentColor.withOpacity(0.85),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
-      ],
-    ),
-  );
+      );
 }
 
-// ── Intake card ──────────────────────────────────────────────────────────────
 class _IntakeCard extends StatelessWidget {
   final IntakeGuideline intake;
   final Color accentColor;
   const _IntakeCard({required this.intake, required this.accentColor});
   @override
   Widget build(BuildContext context) => _Card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(
-          'Daily Intake',
-          accent: accentColor,
-          trailing: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: C.primaryLight,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.monitor_heart_outlined,
-              size: 14,
-              color: C.primary,
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: _intakeStat(
-                'Daily Max',
-                intake.dailyMax,
-                Icons.today,
-                accentColor,
+            _SectionHeader(
+              'Daily Intake',
+              accent: accentColor,
+              trailing: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: C.primaryLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.monitor_heart_outlined,
+                  size: 14,
+                  color: C.primary,
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _intakeStat(
-                'Weekly Max',
-                intake.weeklyMax,
-                Icons.date_range,
-                accentColor,
-              ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _intakeStat(
+                    'Daily Max',
+                    intake.dailyMax,
+                    Icons.today,
+                    accentColor,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _intakeStat(
+                    'Weekly Max',
+                    intake.weeklyMax,
+                    Icons.date_range,
+                    accentColor,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _intakeStat(
+                    'Serving',
+                    intake.servingSize,
+                    Icons.restaurant,
+                    accentColor,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _intakeStat(
+                    'Best Time',
+                    intake.bestTime,
+                    Icons.wb_sunny_outlined,
+                    accentColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: C.border),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: C.warnLight,
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: const Icon(
+                    Icons.warning_amber_outlined,
+                    size: 13,
+                    color: C.warn,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('Cautions', style: T.subhead),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...intake.limitations.map((l) => _warnItem(l, C.warn, C.warnLight)),
+            ...intake.cautions.map((c) => _warnItem(c, C.warn, C.warnLight)),
           ],
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _intakeStat(
-                'Serving',
-                intake.servingSize,
-                Icons.restaurant,
-                accentColor,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _intakeStat(
-                'Best Time',
-                intake.bestTime,
-                Icons.wb_sunny_outlined,
-                accentColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        const Divider(height: 1, color: C.border),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: C.warnLight,
-                borderRadius: BorderRadius.circular(7),
-              ),
-              child: const Icon(
-                Icons.warning_amber_outlined,
-                size: 13,
-                color: C.warn,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text('Cautions', style: T.subhead),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ...intake.limitations.map((l) => _warnItem(l, C.warn, C.warnLight)),
-        ...intake.cautions.map((c) => _warnItem(c, C.warn, C.warnLight)),
-      ],
-    ),
-  );
+      );
 
   Widget _intakeStat(String label, String value, IconData icon, Color color) =>
       Container(
@@ -4498,240 +4536,265 @@ class _IntakeCard extends StatelessWidget {
       );
 }
 
-// ── Targeted people card ─────────────────────────────────────────────────────
 class _TargetedCard extends StatelessWidget {
   final List<String> people;
   final Color accentColor;
   const _TargetedCard({required this.people, required this.accentColor});
   @override
   Widget build(BuildContext context) => _Card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader('Best Suited For', accent: accentColor),
-        const SizedBox(height: 12),
-        ...people.asMap().entries.map(
-          (e) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  margin: const EdgeInsets.only(top: 2),
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 13,
-                      color: accentColor,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeader('Best Suited For', accent: accentColor),
+            const SizedBox(height: 12),
+            ...people.asMap().entries.map(
+                  (e) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          margin: const EdgeInsets.only(top: 2),
+                          decoration: BoxDecoration(
+                            color: accentColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.person_outline,
+                              size: 13,
+                              color: accentColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            e.value,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: C.textPrimary,
+                              fontWeight: FontWeight.w500,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    e.value,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: C.textPrimary,
-                      fontWeight: FontWeight.w500,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 }
 
-// ── Medical card ─────────────────────────────────────────────────────────────
 class _MedicalCard extends StatelessWidget {
   final MedicalInfo medical;
   final Color accentColor;
   const _MedicalCard({required this.medical, required this.accentColor});
   @override
   Widget build(BuildContext context) => _Card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(
-          'Nutrition & Medical',
-          accent: accentColor,
-          trailing: Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: C.primaryLight,
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: const Icon(
-              Icons.medical_information_outlined,
-              size: 13,
-              color: C.primary,
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _nutBadge(
-              'Calories',
-              medical.calories100g,
-              Icons.local_fire_department_outlined,
-            ),
-            _nutBadge('Carbs', medical.carbs100g, Icons.grain),
-            _nutBadge('Fiber', medical.fiber, Icons.spa_outlined),
-            _nutBadge('Potassium', medical.potassium, Icons.bolt_outlined),
-            _nutBadge('Vitamin A', medical.vitaminA, Icons.visibility_outlined),
-            _nutBadge('Vitamin C', medical.vitaminC, Icons.eco_outlined),
-          ],
-        ),
-        const SizedBox(height: 14),
-        _infoRow('Glycemic Index', medical.glycemicIndex),
-        _infoRow('Glycemic Load', medical.glycemicLoad),
-        const SizedBox(height: 10),
-        const Divider(height: 1, color: C.border),
-        const SizedBox(height: 12),
-        Text('Medicinal Uses', style: T.subhead.copyWith(color: C.primary)),
-        const SizedBox(height: 6),
-        ...medical.medicinalUses.map((u) => _bullet(u, C.primary)),
-        if (medical.drugInteractions.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text('Drug Interactions', style: T.subhead.copyWith(color: C.warn)),
-          const SizedBox(height: 6),
-          ...medical.drugInteractions.map(
-            (u) => _warnItem(u, C.warn, C.warnLight),
-          ),
-        ],
-        if (medical.contraindications.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text('Contraindications', style: T.subhead.copyWith(color: C.err)),
-          const SizedBox(height: 6),
-          ...medical.contraindications.map(
-            (u) => _warnItem(u, C.err, C.errLight),
-          ),
-        ],
-      ],
-    ),
-  );
-
-  Widget _nutBadge(String label, String value, IconData icon) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    decoration: BoxDecoration(
-      color: C.primary.withOpacity(0.06),
-      borderRadius: BorderRadius.circular(C.radiusInner),
-      border: Border.all(color: C.primary.withOpacity(0.16)),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: C.primary),
-        const SizedBox(width: 5),
-        Column(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              label,
-              style: TextStyle(fontSize: 9, color: C.primary.withOpacity(0.7)),
-            ),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: C.primary,
+            _SectionHeader(
+              'Nutrition & Medical',
+              accent: accentColor,
+              trailing: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: C.primaryLight,
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: const Icon(
+                  Icons.medical_information_outlined,
+                  size: 13,
+                  color: C.primary,
+                ),
               ),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _nutBadge(
+                  'Calories',
+                  medical.calories100g,
+                  const Icon(
+                    Icons.local_fire_department_outlined,
+                    size: 13,
+                    color: C.primary,
+                  ),
+                ),
+                _nutBadge(
+                  'Carbs',
+                  medical.carbs100g,
+                  const Icon(Icons.grain, size: 13, color: C.primary),
+                ),
+                _nutBadge(
+                  'Fiber',
+                  medical.fiber,
+                  const Icon(Icons.spa_outlined, size: 13, color: C.primary),
+                ),
+                _nutBadge(
+                  'Potassium',
+                  medical.potassium,
+                  const Icon(Icons.bolt_outlined, size: 13, color: C.primary),
+                ),
+                _nutBadge(
+                  'Vitamin A',
+                  medical.vitaminA,
+                  const Icon(Icons.visibility_outlined,
+                      size: 13, color: C.primary),
+                ),
+                _nutBadge(
+                  'Vitamin C',
+                  medical.vitaminC,
+                  const Icon(Icons.eco, size: 13, color: C.primary),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _infoRow('Glycemic Index', medical.glycemicIndex),
+            _infoRow('Glycemic Load', medical.glycemicLoad),
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: C.border),
+            const SizedBox(height: 12),
+            Text('Medicinal Uses', style: T.subhead.copyWith(color: C.primary)),
+            const SizedBox(height: 6),
+            ...medical.medicinalUses.map((u) => _bullet(u, C.primary)),
+            if (medical.drugInteractions.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text('Drug Interactions',
+                  style: T.subhead.copyWith(color: C.warn)),
+              const SizedBox(height: 6),
+              ...medical.drugInteractions.map(
+                (u) => _warnItem(u, C.warn, C.warnLight),
+              ),
+            ],
+            if (medical.contraindications.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text('Contraindications',
+                  style: T.subhead.copyWith(color: C.err)),
+              const SizedBox(height: 6),
+              ...medical.contraindications.map(
+                (u) => _warnItem(u, C.err, C.errLight),
+              ),
+            ],
+          ],
+        ),
+      );
+
+  Widget _nutBadge(String label, String value, Widget icon) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: C.primary.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(C.radiusInner),
+          border: Border.all(color: C.primary.withOpacity(0.16)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            icon,
+            const SizedBox(width: 5),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style:
+                      TextStyle(fontSize: 9, color: C.primary.withOpacity(0.7)),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: C.primary,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      ],
-    ),
-  );
+      );
 
   Widget _infoRow(String label, String value) => Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: Row(
-      children: [
-        Text('$label:', style: T.label),
-        const SizedBox(width: 6),
-        Expanded(child: Text(value, style: T.subhead)),
-      ],
-    ),
-  );
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          children: [
+            Text('$label:', style: T.label),
+            const SizedBox(width: 6),
+            Expanded(child: Text(value, style: T.subhead)),
+          ],
+        ),
+      );
 }
 
-// ── Recipe row card ─────────────────────────────────────────────────────────
 class _RecipeRowCard extends StatelessWidget {
   final List<CamoteRecipe> recipes;
   final Color accentColor;
   const _RecipeRowCard({required this.recipes, required this.accentColor});
   @override
   Widget build(BuildContext context) => _Card(
-    padding: EdgeInsets.zero,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            C.paddingCard,
-            C.paddingCard,
-            C.paddingCard,
-            12,
-          ),
-          child: _SectionHeader(
-            'Recipes',
-            accent: accentColor,
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(C.radiusPill),
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                C.paddingCard,
+                C.paddingCard,
+                C.paddingCard,
+                12,
               ),
-              child: Text(
-                '${recipes.length} available',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  color: accentColor,
-                  letterSpacing: 0.2,
+              child: _SectionHeader(
+                'Recipes',
+                accent: accentColor,
+                trailing: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(C.radiusPill),
+                  ),
+                  child: Text(
+                    '${recipes.length} available',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: accentColor,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-        SizedBox(
-          height: C.carouselCardH + 24,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(
-              C.paddingCard,
-              0,
-              C.paddingCard,
-              C.paddingCard,
+            SizedBox(
+              height: C.carouselCardH + 24,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(
+                  C.paddingCard,
+                  0,
+                  C.paddingCard,
+                  C.paddingCard,
+                ),
+                itemCount: recipes.length,
+                itemBuilder: (ctx, i) => _RecipeCarouselCard(
+                  recipe: recipes[i],
+                  accentColor: accentColor,
+                ),
+              ),
             ),
-            itemCount: recipes.length,
-            itemBuilder: (ctx, i) => _RecipeCarouselCard(
-              recipe: recipes[i],
-              accentColor: accentColor,
-            ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 }
 
-// ── Individual recipe carousel card ─────────────────────────────────────────
 class _RecipeCarouselCard extends StatefulWidget {
   final CamoteRecipe recipe;
   final Color accentColor;
@@ -4775,9 +4838,8 @@ class _RecipeCarouselCardState extends State<_RecipeCarouselCard> {
           ),
           boxShadow: [
             BoxShadow(
-              color: _pressed
-                  ? accent.withOpacity(0.22)
-                  : const Color(0x0F000000),
+              color:
+                  _pressed ? accent.withOpacity(0.22) : const Color(0x0F000000),
               blurRadius: _pressed ? 16 : 10,
               offset: const Offset(0, 4),
             ),
@@ -5148,7 +5210,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
               ),
             ),
             Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 border: Border(bottom: BorderSide(color: C.border)),
               ),
               child: TabBar(
@@ -5191,54 +5253,54 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                       ),
                       const SizedBox(height: 14),
                       ...r.ingredients.asMap().entries.map(
-                        (e) => _Stagger(
-                          index: e.key,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: C.bg,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: C.border),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 26,
-                                  height: 26,
-                                  decoration: BoxDecoration(
-                                    color: accent,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${e.key + 1}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
+                            (e) => _Stagger(
+                              index: e.key,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: C.bg,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: C.border),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 26,
+                                      height: 26,
+                                      decoration: BoxDecoration(
+                                        color: accent,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '${e.key + 1}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      e.value,
-                                      style: T.body.copyWith(
-                                        color: C.textPrimary,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          e.value,
+                                          style: T.body.copyWith(
+                                            color: C.textPrimary,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
                     ],
                   ),
                   ListView(
@@ -5348,60 +5410,60 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                       ),
                       const SizedBox(height: 14),
                       ...r.tips.asMap().entries.map(
-                        (e) => _Stagger(
-                          index: e.key,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  accent.withOpacity(0.09),
-                                  accent.withOpacity(0.03),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: accent.withOpacity(0.22),
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(7),
-                                  decoration: BoxDecoration(
-                                    color: accent,
-                                    borderRadius: BorderRadius.circular(9),
+                            (e) => _Stagger(
+                              index: e.key,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      accent.withOpacity(0.09),
+                                      accent.withOpacity(0.03),
+                                    ],
                                   ),
-                                  child: const Icon(
-                                    Icons.lightbulb,
-                                    color: Colors.white,
-                                    size: 14,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: accent.withOpacity(0.22),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 3),
-                                    child: Text(
-                                      e.value,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: C.textPrimary,
-                                        height: 1.55,
-                                        fontWeight: FontWeight.w500,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(7),
+                                      decoration: BoxDecoration(
+                                        color: accent,
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
+                                      child: const Icon(
+                                        Icons.lightbulb,
+                                        color: Colors.white,
+                                        size: 14,
                                       ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 3),
+                                        child: Text(
+                                          e.value,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: C.textPrimary,
+                                            height: 1.55,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
                       Container(
                         margin: const EdgeInsets.only(top: 6),
                         padding: const EdgeInsets.all(14),
@@ -5451,29 +5513,30 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
     required String title,
     required String subtitle,
     required Color accent,
-  }) => Row(
-    children: [
-      Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: accent.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, size: 16, color: accent),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: T.heading),
-            const SizedBox(height: 2),
-            Text(subtitle, style: T.caption),
-          ],
-        ),
-      ),
-    ],
-  );
+  }) =>
+      Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: accent.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 16, color: accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: T.heading),
+                const SizedBox(height: 2),
+                Text(subtitle, style: T.caption),
+              ],
+            ),
+          ),
+        ],
+      );
 
   Widget _metaCell(IconData icon, String label, String value, Color accent) =>
       Expanded(
@@ -5597,7 +5660,7 @@ class _DetectionsPageState extends State<DetectionsPage> {
                     child: _dlgBtn(
                       'Clear All',
                       onTap: () => Navigator.pop(context, true),
-                      bg: C.primary, // Green
+                      bg: C.primary,
                     ),
                   ),
                 ],
@@ -5615,11 +5678,11 @@ class _DetectionsPageState extends State<DetectionsPage> {
   }
 
   void _detail(DetectionLog log) => showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _DetailSheet(log: log, onDelete: () async => _del(log)),
-  );
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _DetailSheet(log: log, onDelete: () async => _del(log)),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -5628,7 +5691,6 @@ class _DetectionsPageState extends State<DetectionsPage> {
       appBar: _appBar('Detections'),
       body: Column(
         children: [
-          // ── Gradient summary banner ──
           Container(
             margin: const EdgeInsets.fromLTRB(
               C.paddingPage,
@@ -5743,51 +5805,51 @@ class _DetectionsPageState extends State<DetectionsPage> {
                     child: CircularProgressIndicator(color: C.primary),
                   )
                 : _logs.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: C.bg,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: C.border, width: 2),
-                          ),
-                          child: const Icon(
-                            Icons.history,
-                            size: 38,
-                            color: C.textMuted,
-                          ),
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: C.bg,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: C.border, width: 2),
+                              ),
+                              child: const Icon(
+                                Icons.history,
+                                size: 38,
+                                color: C.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text('No detections yet', style: T.heading),
+                            const SizedBox(height: 4),
+                            Text('Scan and save a camote', style: T.body),
+                          ],
                         ),
-                        const SizedBox(height: 14),
-                        Text('No detections yet', style: T.heading),
-                        const SizedBox(height: 4),
-                        Text('Scan and save a camote', style: T.body),
-                      ],
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _load,
-                    color: C.primary,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: C.paddingPage,
-                        vertical: 4,
-                      ),
-                      itemCount: _logs.length,
-                      itemBuilder: (_, i) {
-                        final log = _logs[i];
-                        return _Stagger(
-                          index: i > 5 ? 5 : i,
-                          child: _DetectionCard(
-                            log: log,
-                            onTap: () => _detail(log),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _load,
+                        color: C.primary,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: C.paddingPage,
+                            vertical: 4,
                           ),
-                        );
-                      },
-                    ),
-                  ),
+                          itemCount: _logs.length,
+                          itemBuilder: (_, i) {
+                            final log = _logs[i];
+                            return _Stagger(
+                              index: i > 5 ? 5 : i,
+                              child: _DetectionCard(
+                                log: log,
+                                onTap: () => _detail(log),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
           ),
         ],
       ),
@@ -5831,7 +5893,6 @@ class _DetectionCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Left Accent Bar
             Container(
               width: 4,
               decoration: BoxDecoration(
@@ -5842,7 +5903,6 @@ class _DetectionCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Thumbnail with Gradient Overlay
             ClipRRect(
               child: SizedBox(
                 width: 90,
@@ -5875,7 +5935,6 @@ class _DetectionCard extends StatelessWidget {
                       ),
               ),
             ),
-            // Information Area
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
@@ -6150,7 +6209,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                     borderRadius: BorderRadius.circular(C.radiusCard),
                     child: AspectRatio(
                       aspectRatio: (_iw != null && _ih != null && _ih! > 0)
-                          ? (_iw! / _ih!).clamp(0.6, 1.6)
+                          ? (_iw! / _ih!).clamp(0.6, 1.6).toDouble()
                           : 4.0 / 3.0,
                       child: File(log.imagePath).existsSync()
                           ? Stack(
@@ -6349,44 +6408,44 @@ class LibraryPage extends StatelessWidget {
   const LibraryPage({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: C.bg,
-    appBar: _appBar('Library'),
-    body: SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        C.paddingPage,
-        C.paddingPage,
-        C.paddingPage,
-        28,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Stagger(
-            index: 0,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Camote Varieties', style: T.display),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Explore the four varieties grown locally in Leyte. '
-                    'Tap any card to open the full guide.',
-                    style: T.body,
+        backgroundColor: C.bg,
+        appBar: _appBar('Library'),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            C.paddingPage,
+            C.paddingPage,
+            C.paddingPage,
+            28,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Stagger(
+                index: 0,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Camote Varieties', style: T.display),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Explore the four varieties grown locally in Leyte. '
+                        'Tap any card to open the full guide.',
+                        style: T.body,
+                      ),
+                    ],
                   ),
-                  // REMOVED: The Row containing the pills for a cleaner look.
-                ],
+                ),
               ),
-            ),
+              ...camoteVarieties.asMap().entries.map(
+                    (e) => _Stagger(
+                        index: e.key + 1, child: _VarietyCard(e.value)),
+                  ),
+            ],
           ),
-          ...camoteVarieties.asMap().entries.map(
-            (e) => _Stagger(index: e.key + 1, child: _VarietyCard(e.value)),
-          ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 class _VarietyCard extends StatelessWidget {
@@ -6500,7 +6559,6 @@ class _VarietyCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Emphasized local name (bigger, colored)
                             Text(
                               v.name.toUpperCase(),
                               style: TextStyle(
@@ -6512,7 +6570,6 @@ class _VarietyCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            // Secondary English name
                             Text(
                               v.commonName,
                               style: TextStyle(
@@ -6632,11 +6689,11 @@ class _VarietyCard extends StatelessWidget {
   }
 
   void _show(BuildContext context) => showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _LibraryDetailSheet(variety: v),
-  );
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _LibraryDetailSheet(variety: v),
+      );
 }
 
 // ============================================================================
@@ -6861,28 +6918,56 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                                   (
                                     'Calories',
                                     v.medicalInfo.calories100g,
-                                    Icons.local_fire_department,
+                                    Icon(
+                                      Icons.local_fire_department,
+                                      size: 15,
+                                      color: accentColor,
+                                    ),
                                   ),
                                   (
                                     'Carbs',
                                     v.medicalInfo.carbs100g,
-                                    Icons.grain,
+                                    Icon(
+                                      Icons.grain,
+                                      size: 15,
+                                      color: accentColor,
+                                    ),
                                   ),
-                                  ('Fiber', v.medicalInfo.fiber, Icons.spa),
+                                  (
+                                    'Fiber',
+                                    v.medicalInfo.fiber,
+                                    Icon(
+                                      Icons.spa,
+                                      size: 15,
+                                      color: accentColor,
+                                    ),
+                                  ),
                                   (
                                     'Potassium',
                                     v.medicalInfo.potassium,
-                                    Icons.bolt,
+                                    Icon(
+                                      Icons.bolt,
+                                      size: 15,
+                                      color: accentColor,
+                                    ),
                                   ),
                                   (
                                     'Vitamin A',
                                     v.medicalInfo.vitaminA,
-                                    Icons.visibility,
+                                    Icon(
+                                      Icons.visibility,
+                                      size: 15,
+                                      color: accentColor,
+                                    ),
                                   ),
                                   (
                                     'Vitamin C',
                                     v.medicalInfo.vitaminC,
-                                    Icons.eco,
+                                    Icon(
+                                      Icons.eco,
+                                      size: 15,
+                                      color: accentColor,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -7182,50 +7267,53 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                               ),
                               const SizedBox(height: 12),
                               ...v.targetedPeople.asMap().entries.map(
-                                (e) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        width: 30,
-                                        height: 30,
-                                        decoration: BoxDecoration(
-                                          color: accentColor.withOpacity(0.12),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            '${e.key + 1}',
-                                            style: TextStyle(
-                                              color: accentColor,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w800,
+                                    (e) => Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 10),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            width: 30,
+                                            height: 30,
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  accentColor.withOpacity(0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                8,
+                                              ),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                '${e.key + 1}',
+                                                style: TextStyle(
+                                                  color: accentColor,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 6,
-                                          ),
-                                          child: Text(
-                                            e.value,
-                                            style: T.body.copyWith(
-                                              color: C.textPrimary,
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 6,
+                                              ),
+                                              child: Text(
+                                                e.value,
+                                                style: T.body.copyWith(
+                                                  color: C.textPrimary,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -7259,137 +7347,136 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
   }
 
   Widget _giRow(String label, String value, Color accentColor) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
-      children: [
-        Expanded(child: Text(label, style: T.label)),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: accentColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: accentColor,
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, style: T.label)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: accentColor,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 
   Widget _intakeHero(String label, String value) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.18),
-        borderRadius: BorderRadius.circular(C.radiusInner),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.18),
+            borderRadius: BorderRadius.circular(C.radiusInner),
           ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              height: 1.35,
-            ),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 class _NutGrid extends StatelessWidget {
   final Color accentColor;
-  final List<(String, String, IconData)> items;
+  final List<(String, String, Widget)> items;
   const _NutGrid({required this.accentColor, required this.items});
 
   @override
   Widget build(BuildContext context) => GridView.count(
-    crossAxisCount: 2,
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    crossAxisSpacing: 10,
-    mainAxisSpacing: 10,
-    childAspectRatio: 2.6,
-    children: items
-        .map(
-          (it) => Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(C.radiusInner),
-              border: Border.all(color: accentColor.withOpacity(0.16)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.14),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Icon(it.$3, size: 15, color: accentColor),
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 2.6,
+        children: items
+            .map(
+              (it) => Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(C.radiusInner),
+                  border: Border.all(color: accentColor.withOpacity(0.16)),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        it.$1,
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          color: accentColor.withOpacity(0.85),
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.14),
+                        borderRadius: BorderRadius.circular(7),
                       ),
-                      const SizedBox(height: 1),
-                      Text(
-                        it.$2,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                          color: accentColor,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: Center(child: it.$3),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            it.$1,
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              color: accentColor.withOpacity(0.85),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            it.$2,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              color: accentColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        )
-        .toList(),
-  );
+              ),
+            )
+            .toList(),
+      );
 }
 
-// ── Expandable recipe card ───────────────────────────────────────────────────
 class _ExpandableRecipeCard extends StatefulWidget {
   final CamoteRecipe recipe;
   final Color accentColor;
@@ -7424,9 +7511,8 @@ class _ExpandableRecipeCardState extends State<_ExpandableRecipeCard> {
           ),
           boxShadow: [
             BoxShadow(
-              color: _expanded
-                  ? accent.withOpacity(0.1)
-                  : const Color(0x0A000000),
+              color:
+                  _expanded ? accent.withOpacity(0.1) : const Color(0x0A000000),
               blurRadius: _expanded ? 14 : 10,
               offset: const Offset(0, 4),
             ),
@@ -7618,27 +7704,27 @@ class _ExpandableRecipeCardState extends State<_ExpandableRecipeCard> {
   }
 
   Widget _chip(String label, IconData icon, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.08),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 10, color: color),
-        const SizedBox(width: 3),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(8),
         ),
-      ],
-    ),
-  );
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 10, color: color),
+            const SizedBox(width: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _metaItem(String label, String value, IconData icon, Color color) =>
       Column(
