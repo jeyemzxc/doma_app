@@ -56,9 +56,22 @@ flutter:
     - assets/images/tapol3.png
     - assets/images/tapol4.png
     - assets/images/tapol5.png
-    - assets/best_int8.tflite
+    - assets/images/kadulaw_dish1.jpeg
+    - assets/images/kadulaw_dish2.png
+    - assets/images/kadulaw_dish3.jpg
+    - assets/images/minamon_dish1.jpg
+    - assets/images/minamon_dish2.jpeg
+    - assets/images/minamon_dish3.jpg
+    - assets/images/tapol_dish1.jpg
+    - assets/images/tapol_dish2.jpg
+    - assets/images/tapol_dish3.jpeg
+    - assets/images/kadabaw_dish1.jpg
+    - assets/images/kadabaw_dish2.jpeg
+    - assets/images/kadabaw_dish3.jpg
+    - assets/best.tflite
     - assets/icon/app_icon.png
     - assets/images/logo.png
+    - assets/best_float32.tflite
 
 flutter_launcher_icons:
   android: true

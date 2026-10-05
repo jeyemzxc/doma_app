@@ -1,9 +1,8 @@
-// lib/main.dart — Doma Camote Classifier (UI v25.6)
-// Changes vs v25.5:
-//   • Reverted UI colors to the original green theme.
-//   • Updated the logo to the new green camote image (assets/images/logo.png).
-//   • Analyzing overlay remains 100% opaque (solid white background).
-//   • Fixed all 'num' to 'double' compile errors.
+// lib/main.dart — Doma Camote Classifier (UI v27.1)
+// Changes vs v27.0:
+//   • Auto brightness/contrast normalization before inference.
+//   • Camera: veryHigh resolution + center focus & exposure point.
+//   • Confidence gate kept at 0.75.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -40,7 +39,7 @@ void main() async {
 }
 
 // ============================================================================
-// DESIGN TOKENS (Original Green Theme)
+// DESIGN TOKENS
 // ============================================================================
 
 class C {
@@ -305,7 +304,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '10 min',
         cookTime: '20 min',
         difficulty: 'Easy',
-        imagePath: 'assets/images/kadulaw2.png',
+        imagePath: 'assets/images/kadulaw_dish1.jpeg',
         servings: 4,
         calories: 210,
         ingredients: [
@@ -333,7 +332,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '15 min',
         cookTime: '30 min',
         difficulty: 'Medium',
-        imagePath: 'assets/images/kadulaw3.png',
+        imagePath: 'assets/images/kadulaw_dish2.png',
         servings: 4,
         calories: 185,
         ingredients: [
@@ -364,7 +363,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '10 min',
         cookTime: '35 min',
         difficulty: 'Easy',
-        imagePath: 'assets/images/kadulaw4.png',
+        imagePath: 'assets/images/kadulaw_dish3.jpg',
         servings: 3,
         calories: 195,
         ingredients: [
@@ -481,7 +480,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '5 min',
         cookTime: '25 min',
         difficulty: 'Easy',
-        imagePath: 'assets/images/minamon2.png',
+        imagePath: 'assets/images/minamon_dish1.jpg',
         servings: 6,
         calories: 175,
         ingredients: [
@@ -510,7 +509,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '10 min',
         cookTime: '30 min',
         difficulty: 'Easy',
-        imagePath: 'assets/images/minamon3.png',
+        imagePath: 'assets/images/minamon_dish2.jpeg',
         servings: 4,
         calories: 230,
         ingredients: [
@@ -538,7 +537,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '10 min',
         cookTime: '40 min',
         difficulty: 'Easy',
-        imagePath: 'assets/images/minamon4.png',
+        imagePath: 'assets/images/minamon_dish3.jpg',
         servings: 4,
         calories: 155,
         ingredients: [
@@ -655,7 +654,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '15 min',
         cookTime: '45 min',
         difficulty: 'Medium',
-        imagePath: 'assets/images/tapol2.png',
+        imagePath: 'assets/images/tapol_dish1.jpg',
         servings: 8,
         calories: 145,
         ingredients: [
@@ -685,7 +684,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '20 min',
         cookTime: '15 min',
         difficulty: 'Medium',
-        imagePath: 'assets/images/tapol3.png',
+        imagePath: 'assets/images/tapol_dish2.jpg',
         servings: 5,
         calories: 220,
         ingredients: [
@@ -713,7 +712,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '25 min',
         cookTime: '35 min',
         difficulty: 'Hard',
-        imagePath: 'assets/images/tapol4.png',
+        imagePath: 'assets/images/tapol_dish3.jpeg',
         servings: 12,
         calories: 195,
         ingredients: [
@@ -829,7 +828,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '15 min',
         cookTime: '25 min',
         difficulty: 'Easy',
-        imagePath: 'assets/images/kadabaw2.png',
+        imagePath: 'assets/images/kadabaw_dish1.jpg',
         servings: 4,
         calories: 165,
         ingredients: [
@@ -861,7 +860,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '10 min',
         cookTime: '35 min',
         difficulty: 'Easy',
-        imagePath: 'assets/images/kadabaw3.png',
+        imagePath: 'assets/images/kadabaw_dish2.jpeg',
         servings: 4,
         calories: 145,
         ingredients: [
@@ -889,7 +888,7 @@ const List<CamoteVariety> camoteVarieties = [
         prepTime: '10 min',
         cookTime: '0 min',
         difficulty: 'Easy',
-        imagePath: 'assets/images/kadabaw4.png',
+        imagePath: 'assets/images/kadabaw_dish3.jpg',
         servings: 2,
         calories: 175,
         ingredients: [
@@ -1077,61 +1076,48 @@ class DetectionLogger {
 }
 
 // ============================================================================
-// RESHAPE HELPER
-// ============================================================================
-
-extension ReshapeF on Float32List {
-  List<dynamic> r4(List<int> s) {
-    final b = s[0], h = s[1], w = s[2], c = s[3];
-    return List.generate(
-      b,
-      (_) => List.generate(
-        h,
-        (y) => List.generate(
-          w,
-          (x) => List.generate(
-            c,
-            (ch) => this[(y * w + x) * c + ch],
-            growable: false,
-          ),
-          growable: false,
-        ),
-        growable: false,
-      ),
-      growable: false,
-    );
-  }
-}
-
-// ============================================================================
-// CLASSIFIER
+// CLASSIFIER — v27.1 with auto brightness/contrast normalization
 // ============================================================================
 
 class CamoteClassifier {
   Interpreter? _interp;
   int _inSz = 640;
+  bool _nchw = false;
 
-  static const double _rawGate = 0.55;
-  static const double _displayGate = 0.55;
+  // Confidence gate: below 75% will not be shown
+  static const double _rawGate = 0.75;
+  static const double _displayGate = 0.75;
   static const double _iouThres = 0.45;
-  static const double _minAspect = 0.25;
-  static const double _maxAspect = 4.0;
-  static const double _minArea = 0.02;
-  static const double _maxArea = 0.90;
   static const List<String> labels = ['kadabaw', 'kadulaw', 'minamon', 'tapol'];
 
   Future<void> loadModel() async {
     try {
+      debugPrint('[Doma] ══════════ LOAD MODEL ══════════');
       _interp = await Interpreter.fromAsset(
-        'assets/best_int8.tflite',
-        options: InterpreterOptions()
-          ..threads = 4
-          ..useNnApiForAndroid = true,
+        'assets/best_float32.tflite',
+        options: InterpreterOptions()..threads = 4,
       );
-      final inShape = _interp!.getInputTensor(0).shape;
-      if (inShape.length == 4 && inShape[1] > 0) _inSz = inShape[1];
-    } catch (e) {
-      debugPrint('[Doma] load err: $e');
+
+      final inT = _interp!.getInputTensor(0);
+      final inShape = inT.shape;
+      debugPrint('[Doma] IN  name=${inT.name} shape=$inShape type=${inT.type}');
+
+      if (inShape.length == 4) {
+        if (inShape[1] == 3) {
+          _nchw = true;
+          _inSz = inShape[2];
+        } else {
+          _nchw = false;
+          _inSz = inShape[1];
+        }
+      }
+
+      final outT = _interp!.getOutputTensor(0);
+      debugPrint('[Doma] OUT name=${outT.name} '
+          'shape=${outT.shape} type=${outT.type}');
+      debugPrint('[Doma] NCHW=$_nchw inSz=$_inSz');
+    } catch (e, st) {
+      debugPrint('[Doma] ❌ load err: $e\n$st');
     }
   }
 
@@ -1141,130 +1127,237 @@ class CamoteClassifier {
     try {
       if (_interp == null) await loadModel();
       if (_interp == null) return const _ScanResult(state: _ScanState.notFound);
+
       final bytes = await f.readAsBytes();
       if (bytes.isEmpty) return const _ScanResult(state: _ScanState.notFound);
+
       img.Image? im = img.decodeImage(bytes);
       if (im == null || im.width < 32 || im.height < 32) {
         return const _ScanResult(state: _ScanState.notFound);
       }
-      im = _enhance(im);
+      debugPrint('[Doma] decoded image ${im.width}x${im.height}');
       return _infer(im);
     } catch (e, st) {
-      debugPrint('[Doma] detect err: $e\n$st');
+      debugPrint('[Doma] ❌ detect err: $e\n$st');
       return const _ScanResult(state: _ScanState.notFound);
     }
   }
 
-  img.Image _enhance(img.Image src) {
-    const maxDim = 1920;
-    img.Image p = src;
-    if (src.width > maxDim || src.height > maxDim) {
-      final s = maxDim / math.max(src.width, src.height);
-      p = img.copyResize(
-        src,
-        width: (src.width * s).round(),
-        height: (src.height * s).round(),
-        interpolation: img.Interpolation.linear,
-      );
-    }
-    double sR = 0, sG = 0, sB = 0;
-    int cnt = 0;
-    for (int y = 0; y < p.height; y += 4) {
-      for (int x = 0; x < p.width; x += 4) {
-        final px = p.getPixel(x, y);
-        sR += px.r.toDouble();
-        sG += px.g.toDouble();
-        sB += px.b.toDouble();
-        cnt++;
+  /// Auto brightness + contrast + letterbox. Builds a nested list matching
+  /// the model's input shape.
+  List<dynamic> _buildInput(img.Image source) {
+    // ── 1. Compute mean brightness from a subsampled grid ───────────────
+    double sumR = 0, sumG = 0, sumB = 0;
+    int count = 0;
+    final step = math.max(1, source.width ~/ 64);
+    for (int y = 0; y < source.height; y += step) {
+      for (int x = 0; x < source.width; x += step) {
+        final p = source.getPixel(x, y);
+        sumR += p.r;
+        sumG += p.g;
+        sumB += p.b;
+        count++;
       }
     }
-    final avg = (sR + sG + sB) / (cnt * 3.0);
-    final bF = avg < 100
-        ? 1.04
-        : avg > 180
-            ? 1.01
-            : 1.02;
-    final cF = avg < 100
-        ? 1.10
-        : avg > 180
-            ? 1.04
-            : 1.06;
-    final out = img.Image(width: p.width, height: p.height);
-    for (int y = 0; y < p.height; y++) {
-      for (int x = 0; x < p.width; x++) {
-        final px = p.getPixel(x, y);
-        double r = px.r.toDouble() * bF,
-            g = px.g.toDouble() * bF,
-            b = px.b.toDouble() * bF;
-        r = 128 + (r - 128) * cF;
-        g = 128 + (g - 128) * cF;
-        b = 128 + (b - 128) * cF;
-        out.setPixel(
-          x,
-          y,
-          img.ColorRgb8(
-            r.clamp(0, 255).toInt(),
-            g.clamp(0, 255).toInt(),
-            b.clamp(0, 255).toInt(),
-          ),
-        );
-      }
-    }
-    return out;
-  }
+    final avgR = sumR / count, avgG = sumG / count, avgB = sumB / count;
+    final avg = (avgR + avgG + avgB) / 3.0;
 
-  Float32List _letterbox(img.Image im) {
-    final sz = _inSz, w = im.width, h = im.height;
-    final out = Float32List(sz * sz * 3);
+    // ── 2. Decide brightness + contrast factors ─────────────────────────
+    final brightnessFactor = avg < 60
+        ? 1.35
+        : avg < 100
+            ? 1.15
+            : avg > 200
+                ? 0.92
+                : avg > 160
+                    ? 0.97
+                    : 1.0;
+
+    final contrastFactor = avg < 80
+        ? 1.15
+        : avg > 180
+            ? 1.03
+            : 1.07;
+
+    img.Image enhanced = source;
+    if (brightnessFactor != 1.0 || contrastFactor != 1.0) {
+      enhanced = img.Image(width: source.width, height: source.height);
+      for (int y = 0; y < source.height; y++) {
+        for (int x = 0; x < source.width; x++) {
+          final p = source.getPixel(x, y);
+          double r = p.r * brightnessFactor;
+          double g = p.g * brightnessFactor;
+          double b = p.b * brightnessFactor;
+          r = 128 + (r - 128) * contrastFactor;
+          g = 128 + (g - 128) * contrastFactor;
+          b = 128 + (b - 128) * contrastFactor;
+          enhanced.setPixel(
+            x,
+            y,
+            img.ColorRgb8(
+              r.clamp(0, 255).toInt(),
+              g.clamp(0, 255).toInt(),
+              b.clamp(0, 255).toInt(),
+            ),
+          );
+        }
+      }
+      debugPrint('[Doma] enhanced: avg=${avg.toStringAsFixed(0)} '
+          'bright=${brightnessFactor.toStringAsFixed(2)} '
+          'contrast=${contrastFactor.toStringAsFixed(2)}');
+    } else {
+      debugPrint('[Doma] enhanced: avg=${avg.toStringAsFixed(0)} (no change)');
+    }
+
+    // ── 3. Letterbox + normalize ────────────────────────────────────────
+    final sz = _inSz;
+    final w = enhanced.width, h = enhanced.height;
     final sc = math.min(sz / w, sz / h);
     final nW = (w * sc).floor(), nH = (h * sc).floor();
-    final pX = ((sz - nW) / 2).floor(), pY = ((sz - nH) / 2).floor();
+    final pX = ((sz - nW) ~/ 2), pY = ((sz - nH) ~/ 2);
     const pv = 114.0 / 255.0;
     final inv = 1.0 / sc;
-    for (int y = 0; y < sz; y++) {
-      for (int x = 0; x < sz; x++) {
-        final p = (y * sz + x) * 3;
-        if (x < pX || x >= pX + nW || y < pY || y >= pY + nH) {
-          out[p] = pv;
-          out[p + 1] = pv;
-          out[p + 2] = pv;
-        } else {
-          final sx = (x - pX) * inv, sy = (y - pY) * inv;
-          final x0 = math.max(0, math.min(w - 1, (sx - 0.5).floor()));
-          final y0 = math.max(0, math.min(h - 1, (sy - 0.5).floor()));
-          final x1 = math.max(0, math.min(w - 1, x0 + 1));
-          final y1 = math.max(0, math.min(h - 1, y0 + 1));
+
+    if (_nchw) {
+      final out = List.generate(
+        1,
+        (_) => List.generate(
+            3, (_) => List.generate(sz, (_) => List.filled(sz, pv))),
+      );
+      for (int y = 0; y < nH; y++) {
+        final sy = (y + 0.5) * inv;
+        final y0 = (sy - 0.5).floor().clamp(0, h - 1);
+        final y1 = (y0 + 1).clamp(0, h - 1);
+        final fy = (sy - y0 - 0.5).clamp(0.0, 1.0).toDouble();
+        for (int x = 0; x < nW; x++) {
+          final sx = (x + 0.5) * inv;
+          final x0 = (sx - 0.5).floor().clamp(0, w - 1);
+          final x1 = (x0 + 1).clamp(0, w - 1);
           final fx = (sx - x0 - 0.5).clamp(0.0, 1.0).toDouble();
-          final fy = (sy - y0 - 0.5).clamp(0.0, 1.0).toDouble();
-          final q00 = im.getPixel(x0, y0), q10 = im.getPixel(x1, y0);
-          final q01 = im.getPixel(x0, y1), q11 = im.getPixel(x1, y1);
+          final q00 = enhanced.getPixel(x0, y0),
+              q10 = enhanced.getPixel(x1, y0);
+          final q01 = enhanced.getPixel(x0, y1),
+              q11 = enhanced.getPixel(x1, y1);
           double bi(num a, num b, num c, num d) => (a * (1 - fx) * (1 - fy) +
                   b * fx * (1 - fy) +
                   c * (1 - fx) * fy +
                   d * fx * fy)
               .clamp(0, 255)
               .toDouble();
-          out[p] = bi(q00.r, q10.r, q01.r, q11.r) / 255.0;
-          out[p + 1] = bi(q00.g, q10.g, q01.g, q11.g) / 255.0;
-          out[p + 2] = bi(q00.b, q10.b, q01.b, q11.b) / 255.0;
+          final px = pX + x, py = pY + y;
+          out[0][0][py][px] = bi(q00.r, q10.r, q01.r, q11.r) / 255.0;
+          out[0][1][py][px] = bi(q00.g, q10.g, q01.g, q11.g) / 255.0;
+          out[0][2][py][px] = bi(q00.b, q10.b, q01.b, q11.b) / 255.0;
         }
       }
+      return out;
+    } else {
+      final out = List.generate(
+        1,
+        (_) => List.generate(
+            sz, (_) => List.generate(sz, (_) => List.filled(3, pv))),
+      );
+      for (int y = 0; y < nH; y++) {
+        final sy = (y + 0.5) * inv;
+        final y0 = (sy - 0.5).floor().clamp(0, h - 1);
+        final y1 = (y0 + 1).clamp(0, h - 1);
+        final fy = (sy - y0 - 0.5).clamp(0.0, 1.0).toDouble();
+        for (int x = 0; x < nW; x++) {
+          final sx = (x + 0.5) * inv;
+          final x0 = (sx - 0.5).floor().clamp(0, w - 1);
+          final x1 = (x0 + 1).clamp(0, w - 1);
+          final fx = (sx - x0 - 0.5).clamp(0.0, 1.0).toDouble();
+          final q00 = enhanced.getPixel(x0, y0),
+              q10 = enhanced.getPixel(x1, y0);
+          final q01 = enhanced.getPixel(x0, y1),
+              q11 = enhanced.getPixel(x1, y1);
+          double bi(num a, num b, num c, num d) => (a * (1 - fx) * (1 - fy) +
+                  b * fx * (1 - fy) +
+                  c * (1 - fx) * fy +
+                  d * fx * fy)
+              .clamp(0, 255)
+              .toDouble();
+          final px = pX + x, py = pY + y;
+          out[0][py][px][0] = bi(q00.r, q10.r, q01.r, q11.r) / 255.0;
+          out[0][py][px][1] = bi(q00.g, q10.g, q01.g, q11.g) / 255.0;
+          out[0][py][px][2] = bi(q00.b, q10.b, q01.b, q11.b) / 255.0;
+        }
+      }
+      return out;
     }
-    return out;
   }
 
   _ScanResult _infer(img.Image image) {
     final nCls = labels.length;
-    final input = _letterbox(image);
+    final CC = 4 + nCls;
     final oShape = _interp!.getOutputTensor(0).shape;
-    final isSimple = oShape.length == 3 &&
-        (oShape[2] == 6 || (oShape[1] == 6 && oShape[2] > 6));
-    final raw = isSimple
-        ? _decodeSimple(oShape, input)
-        : _decodeYolo(oShape, nCls, input);
+
+    bool transposed;
+    int N;
+    if (oShape.length == 3 && oShape[1] == CC) {
+      transposed = true;
+      N = oShape[2];
+    } else if (oShape.length == 3 && oShape[2] == CC) {
+      transposed = false;
+      N = oShape[1];
+    } else {
+      debugPrint('[Doma] ⚠️ unexpected output shape $oShape');
+      return const _ScanResult(state: _ScanState.notFound);
+    }
+    debugPrint('[Doma] inference: oShape=$oShape '
+        'transposed=$transposed N=$N CC=$CC');
+
+    final input = _buildInput(image);
+
+    final outBuf = transposed
+        ? List.generate(
+            1,
+            (_) => List.generate(CC, (_) => List<double>.filled(N, 0.0)),
+          )
+        : List.generate(
+            1,
+            (_) => List.generate(N, (_) => List<double>.filled(CC, 0.0)),
+          );
+
+    try {
+      _interp!.run(input, outBuf);
+      debugPrint('[Doma] ✅ inference ran');
+    } catch (e, st) {
+      debugPrint('[Doma] ❌ RUN FAILED: $e\n$st');
+      return const _ScanResult(state: _ScanState.notFound);
+    }
+
+    final preds = List.generate(N, (i) => List<double>.filled(CC, 0.0));
+    for (int n = 0; n < N; n++) {
+      for (int c = 0; c < CC; c++) {
+        preds[n][c] = transposed ? outBuf[0][c][n] : outBuf[0][n][c];
+      }
+    }
+
+    double maxScore = -1e9;
+    int maxI = 0, maxC = 0;
+    for (int n = 0; n < N; n++) {
+      for (int c = 0; c < nCls; c++) {
+        final v = preds[n][4 + c];
+        if (v > maxScore) {
+          maxScore = v;
+          maxI = n;
+          maxC = c;
+        }
+      }
+    }
+    debugPrint('[Doma] MAX raw cls score=${maxScore.toStringAsFixed(4)} '
+        'at i=$maxI c=$maxC (${labels[maxC]})');
+
+    final raw = _parse(preds, nCls, _inSz);
+    debugPrint('[Doma] parsed=${raw.length}');
     final mapped = _unmap(raw, image.width.toDouble(), image.height.toDouble());
+    debugPrint('[Doma] unmap=${mapped.length}');
     final nmsed = _nms(mapped);
+    debugPrint('[Doma] nms=${nmsed.length}');
+
     if (nmsed.isEmpty) return const _ScanResult(state: _ScanState.notFound);
+
     final dets = nmsed
         .map(
           (w) => DetectionResult(
@@ -1277,103 +1370,26 @@ class CamoteClassifier {
           ),
         )
         .toList();
+    debugPrint('[Doma] ✅ FINAL detections: ${dets.length}');
     return _ScanResult(detections: dets, state: _ScanState.ok);
-  }
-
-  List<_Det> _decodeYolo(List<int> shape, int nCls, Float32List input) {
-    final sz = _inSz, CC = 4 + nCls;
-    late bool tr;
-    late int N;
-    if (shape.length == 3 && shape[1] == CC) {
-      tr = true;
-      N = shape[2];
-    } else if (shape.length == 3 && shape[2] == CC) {
-      tr = false;
-      N = shape[1];
-    } else if (shape.length == 2 && shape[1] == CC) {
-      tr = false;
-      N = shape[0];
-    } else {
-      tr = true;
-      N = shape.length == 3 ? shape[2] : shape[0];
-    }
-    final buf = tr
-        ? List.generate(
-            1,
-            (_) => List.generate(CC, (_) => List<double>.filled(N, 0.0)),
-          )
-        : List.generate(
-            1,
-            (_) => List.generate(N, (_) => List<double>.filled(CC, 0.0)),
-          );
-    _interp!.run(input.r4([1, sz, sz, 3]), buf);
-    List<List<double>> preds;
-    if (tr) {
-      preds = List.generate(N, (i) => List<double>.filled(CC, 0.0));
-      for (int c = 0; c < CC; c++) {
-        for (int n = 0; n < N; n++) {
-          preds[n][c] = buf[0][c][n];
-        }
-      }
-    } else {
-      preds = buf[0].cast<List<double>>();
-    }
-    return _parse(preds, nCls, sz);
-  }
-
-  List<_Det> _decodeSimple(List<int> shape, Float32List input) {
-    final sz = _inSz;
-    late int rows;
-    late bool cf;
-    if (shape.length == 3 && shape[2] == 6) {
-      rows = shape[1];
-      cf = false;
-    } else {
-      rows = shape[2];
-      cf = true;
-    }
-    final buf = List.generate(
-      1,
-      (_) => cf
-          ? List.generate(6, (_) => List<double>.filled(rows, 0.0))
-          : List.generate(rows, (_) => List<double>.filled(6, 0.0)),
-    );
-    _interp!.run(input.r4([1, sz, sz, 3]), buf);
-    final rows2d = cf
-        ? List.generate(rows, (i) => List.generate(6, (c) => buf[0][c][i]))
-        : buf[0].cast<List<double>>();
-    final dets = <_Det>[];
-    for (final row in rows2d) {
-      if (row.length < 6) continue;
-      final x1 = row[0], y1 = row[1], x2 = row[2], y2 = row[3];
-      final raw = row[4];
-      if (raw < _rawGate) continue;
-      final score = _cal(raw);
-      if (score < _displayGate || x2 <= x1 || y2 <= y1) continue;
-      final cls = row[5].round().clamp(0, labels.length - 1).toInt();
-      if (!_boxOk(x1, y1, x2, y2, 1.0)) continue;
-      dets.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), cls, score));
-    }
-    dets.sort((a, b) => b.score.compareTo(a.score));
-    return dets.length > 200 ? dets.sublist(0, 200) : dets;
   }
 
   List<_Det> _parse(List<List<double>> preds, int nCls, int sz) {
     final dets = <_Det>[];
     for (final p in preds) {
       if (p.length < 4 + nCls) continue;
+
       double best = 0;
       int bestC = -1;
       for (int c = 0; c < nCls; c++) {
-        final raw = _sig(p[4 + c]);
-        if (raw > best) {
-          best = raw;
+        final v = p[4 + c];
+        if (v > best) {
+          best = v;
           bestC = c;
         }
       }
       if (best < _rawGate || bestC < 0) continue;
-      final score = _cal(best);
-      if (score < _displayGate) continue;
+
       double cx = p[0], cy = p[1], w = p[2], h = p[3];
       if (cx.abs() <= 1.5 &&
           cy.abs() <= 1.5 &&
@@ -1384,41 +1400,20 @@ class CamoteClassifier {
         w *= sz;
         h *= sz;
       }
+
       double x1 = cx - w / 2, y1 = cy - h / 2, x2 = cx + w / 2, y2 = cy + h / 2;
-      if (x2 <= x1 || y2 <= y1) {
-        x1 = cx;
-        y1 = cy;
-        x2 = w;
-        y2 = h;
-      }
-      if (x2 < -5 || y2 < -5 || x1 > sz + 5 || y1 > sz + 5) continue;
-      if (!_boxOk(x1, y1, x2, y2, sz.toDouble())) continue;
-      dets.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), bestC, score));
+      if (x2 <= x1 || y2 <= y1) continue;
+      if (x2 <= 0 || y2 <= 0 || x1 >= sz || y1 >= sz) continue;
+
+      final bw = x2 - x1, bh = y2 - y1;
+      if (bw < 2 || bh < 2) continue;
+      final areaFrac = (bw * bh) / (sz * sz);
+      if (areaFrac < 0.0005 || areaFrac > 0.99) continue;
+
+      dets.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), bestC, best));
     }
     dets.sort((a, b) => b.score.compareTo(a.score));
-    return dets.length > 200 ? dets.sublist(0, 200) : dets;
-  }
-
-  bool _boxOk(double x1, double y1, double x2, double y2, double ds) {
-    final bw = x2 - x1, bh = y2 - y1;
-    if (ds > 1) {
-      final mn = ds * 0.04, mx = ds * 0.92;
-      if (bw < mn || bh < mn || bw > mx || bh > mx) return false;
-    } else {
-      final area = bw * bh;
-      if (area < _minArea || area > _maxArea) return false;
-    }
-    final aspect = bh / (bw.abs() + 1e-9);
-    return aspect >= _minAspect && aspect <= _maxAspect;
-  }
-
-  double _sig(double x) =>
-      x >= 0 ? 1.0 / (1.0 + math.exp(-x)) : math.exp(x) / (1.0 + math.exp(x));
-
-  double _cal(double s) {
-    if (s < 0.70) return s;
-    if (s < 0.85) return 0.70 + (s - 0.70) * 1.35;
-    return 0.90 + (s - 0.85) * 1.0;
+    return dets.length > 300 ? dets.sublist(0, 300) : dets;
   }
 
   List<_Det> _unmap(List<_Det> dets, double srcW, double srcH) {
@@ -1431,8 +1426,7 @@ class CamoteClassifier {
       final y1 = ((d.box.top - pY) / sc / srcH).clamp(0.0, 1.0).toDouble();
       final x2 = ((d.box.right - pX) / sc / srcW).clamp(0.0, 1.0).toDouble();
       final y2 = ((d.box.bottom - pY) / sc / srcH).clamp(0.0, 1.0).toDouble();
-      if ((x2 - x1) < 0.01 || (y2 - y1) < 0.01) continue;
-      if (!_boxOk(x1, y1, x2, y2, 1.0)) continue;
+      if ((x2 - x1) < 0.005 || (y2 - y1) < 0.005) continue;
       out.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), d.cls, d.score));
     }
     return out;
@@ -2100,7 +2094,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
 }
 
 // ============================================================================
-// ANALYZING OVERLAY  ★ 100% OPACITY ★
+// ANALYZING OVERLAY
 // ============================================================================
 
 class _AnalyzingOverlay extends StatefulWidget {
@@ -2161,19 +2155,17 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
       child: FadeTransition(
         opacity: _fade,
         child: Material(
-          color: Colors.white, // 100% opaque white background
+          color: Colors.white,
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Spinner with the new Logo inside ──
                 SizedBox(
                   width: 120,
                   height: 120,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Track ring
                       Container(
                         width: 120,
                         height: 120,
@@ -2185,7 +2177,6 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
                           ),
                         ),
                       ),
-                      // Rotating arc
                       AnimatedBuilder(
                         animation: _spinCtrl,
                         builder: (_, __) => Transform.rotate(
@@ -2198,7 +2189,6 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
                           ),
                         ),
                       ),
-                      // Center Logo
                       Image.asset(
                         'assets/images/logo.png',
                         width: 70,
@@ -2209,8 +2199,6 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
                   ),
                 ),
                 const SizedBox(height: 32),
-
-                // ── Title with cycling dots ──
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -2237,8 +2225,6 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
                   ],
                 ),
                 const SizedBox(height: 8),
-
-                // ── Subtitle ──
                 const Text(
                   'Identifying camote variety',
                   textAlign: TextAlign.center,
@@ -2250,8 +2236,6 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // ── Thin indeterminate progress bar ──
                 SizedBox(
                   width: 200,
                   child: ClipRRect(
@@ -2835,9 +2819,10 @@ class _ScanPageState extends State<ScanPage>
               orElse: () => widget.cameras.first,
             )
           : widget.cameras.first;
+      // Higher resolution + center focus + center exposure
       final c = CameraController(
         camDesc,
-        ResolutionPreset.high,
+        ResolutionPreset.veryHigh,
         enableAudio: false,
         imageFormatGroup: Platform.isIOS
             ? ImageFormatGroup.bgra8888
@@ -2856,6 +2841,9 @@ class _ScanPageState extends State<ScanPage>
         await c.setFocusMode(FocusMode.auto);
         await c.setExposureMode(ExposureMode.auto);
         await c.setFlashMode(FlashMode.off);
+        // Center metering for focus & exposure
+        await c.setFocusPoint(const Offset(0.5, 0.5));
+        await c.setExposurePoint(const Offset(0.5, 0.5));
       } catch (_) {}
       if (mounted) setState(() => _camReady = true);
     } catch (e) {
