@@ -1,14 +1,10 @@
-// lib/main.dart — Doma Camote Classifier (UI v27.1)
-// Changes vs v27.0:
-//   • Auto brightness/contrast normalization before inference.
-//   • Camera: veryHigh resolution + center focus & exposure point.
-//   • Confidence gate kept at 0.75.
-
 import 'dart:async';
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:io';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,7 +18,7 @@ List<CameraDescription> _cameras = [];
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -39,49 +35,64 @@ void main() async {
 }
 
 // ============================================================================
-// DESIGN TOKENS
+// DESIGN TOKENS — Modern minimal system
 // ============================================================================
 
 class C {
-  static const primary = Color(0xFF1A7A4C);
-  static const primaryDark = Color(0xFF0F5233);
-  static const primaryDeep = Color(0xFF0A3D26);
-  static const primaryMid = Color(0xFF2ECC82);
-  static const primarySoft = Color(0xFF4CAF7D);
-  static const primaryLight = Color(0xFFE6F4ED);
-  static const primaryTint = Color(0xFFF2FAF6);
+  // Brand — deep sage green, contemporary
+  static const primary = Color(0xFF1F6E4A);
+  static const primaryDark = Color(0xFF14512F);
+  static const primaryDeep = Color(0xFF0A2E1C);
+  static const primaryMid = Color(0xFF3FA96E);
+  static const primarySoft = Color(0xFF7BC79A);
+  static const primaryLight = Color(0xFFE7F4EC);
+  static const primaryTint = Color(0xFFF3FAF5);
 
-  static const bg = Color(0xFFF5F7F8);
+  // Surfaces — refined neutral palette
+  static const bg = Color(0xFFFAFBFC);
   static const surface = Color(0xFFFFFFFF);
-  static const surfaceDim = Color(0xFFF0F2F5);
+  static const surfaceDim = Color(0xFFF3F5F7);
+  static const surfaceElevated = Color(0xFFFFFFFF);
 
-  static const border = Color(0xFFE6EBEF);
-  static const borderMid = Color(0xFFCBD2D9);
+  // Borders — hairline & subtle
+  static const border = Color(0xFFEBEFF2);
+  static const borderMid = Color(0xFFD8DEE5);
+  static const borderStrong = Color(0xFFB8C0CA);
 
-  static const textPrimary = Color(0xFF0D1720);
-  static const textSec = Color(0xFF566072);
-  static const textMuted = Color(0xFF98A1AF);
+  // Text — high-contrast hierarchy
+  static const textPrimary = Color(0xFF0A1A29);
+  static const textSec = Color(0xFF4D5C6B);
+  static const textMuted = Color(0xFF8E99A6);
+  static const textFaint = Color(0xFFB5BCC5);
 
-  static const err = Color(0xFFD93025);
-  static const errLight = Color(0xFFFEF1F0);
-  static const warn = Color(0xFFCA8500);
-  static const warnLight = Color(0xFFFFF8E6);
+  // Semantic
+  static const err = Color(0xFFD14343);
+  static const errLight = Color(0xFFFDEEEE);
+  static const warn = Color(0xFFB26B00);
+  static const warnLight = Color(0xFFFFF4E0);
+  static const success = Color(0xFF2E7D4F);
+  static const successLight = Color(0xFFE8F5EE);
+  static const info = Color(0xFF2563EB);
+  static const infoLight = Color(0xFFEEF3FE);
 
   static const white = Colors.white;
 
-  static const double radiusCard = 16.0;
-  static const double radiusInner = 10.0;
-  static const double radiusPill = 20.0;
+  // Shape — modern, consistent
+  static const double radiusCard = 20.0;
+  static const double radiusInner = 14.0;
+  static const double radiusSmall = 10.0;
+  static const double radiusPill = 999.0;
   static const double paddingCard = 18.0;
-  static const double paddingPage = 16.0;
+  static const double paddingPage = 20.0;
 
-  static const double carouselCardW = 168.0;
-  static const double carouselCardH = 200.0;
-  static const double carouselImageH = 110.0;
+  // Carousel
+  static const double carouselCardW = 172.0;
+  static const double carouselCardH = 208.0;
+  static const double carouselImageH = 116.0;
 }
 
 // ============================================================================
-// TYPOGRAPHY
+// TYPOGRAPHY — Modern, tighter, cleaner
 // ============================================================================
 
 class T {
@@ -89,28 +100,28 @@ class T {
     fontSize: 26,
     fontWeight: FontWeight.w800,
     color: C.textPrimary,
-    letterSpacing: -0.6,
+    letterSpacing: -0.7,
     height: 1.15,
   );
   static const title = TextStyle(
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: FontWeight.w800,
     color: C.textPrimary,
-    letterSpacing: -0.35,
+    letterSpacing: -0.4,
     height: 1.2,
   );
   static const heading = TextStyle(
     fontSize: 15,
     fontWeight: FontWeight.w700,
     color: C.textPrimary,
-    letterSpacing: -0.15,
+    letterSpacing: -0.2,
     height: 1.25,
   );
   static const subhead = TextStyle(
     fontSize: 13.5,
     fontWeight: FontWeight.w600,
     color: C.textPrimary,
-    letterSpacing: -0.05,
+    letterSpacing: -0.1,
     height: 1.3,
   );
   static const body = TextStyle(
@@ -118,6 +129,13 @@ class T {
     fontWeight: FontWeight.w400,
     color: C.textSec,
     height: 1.55,
+    letterSpacing: -0.05,
+  );
+  static const bodyMedium = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    color: C.textPrimary,
+    height: 1.5,
     letterSpacing: -0.05,
   );
   static const caption = TextStyle(
@@ -144,19 +162,19 @@ class T {
 }
 
 // ============================================================================
-// VARIETY ACCENTS
+// VARIETY ACCENTS — Sophisticated, muted
 // ============================================================================
 
 Color _accent(String cls) {
   switch (cls.toLowerCase()) {
     case 'minamon':
-      return const Color(0xFFD4A017);
+      return const Color(0xFFB8860B);
     case 'tapol':
-      return const Color(0xFF7B4FC9);
+      return const Color(0xFF6B4C9A);
     case 'kadabaw':
-      return const Color(0xFFD6196B);
+      return const Color(0xFFB13865);
     case 'kadulaw':
-      return const Color(0xFFE05A17);
+      return const Color(0xFFC75B12);
     default:
       return C.primary;
   }
@@ -259,7 +277,7 @@ class CamoteVariety {
 }
 
 // ============================================================================
-// VARIETY DATA
+// VARIETY DATA (unchanged — kept for brevity in this modernization pass)
 // ============================================================================
 
 const List<CamoteVariety> camoteVarieties = [
@@ -969,22 +987,6 @@ const List<CamoteVariety> camoteVarieties = [
 // DETECTION MODELS
 // ============================================================================
 
-class _Det {
-  final Rect box;
-  final int cls;
-  final double score;
-  const _Det(this.box, this.cls, this.score);
-}
-
-class _ScanResult {
-  final List<DetectionResult> detections;
-  final _ScanState state;
-  const _ScanResult({this.detections = const [], this.state = _ScanState.ok});
-  bool get found => detections.isNotEmpty && state == _ScanState.ok;
-}
-
-enum _ScanState { ok, notFound }
-
 class DetectionResult {
   final String className;
   final double confidence, x, y, width, height;
@@ -1005,12 +1007,12 @@ class DetectionResult {
         'height': height,
       };
   factory DetectionResult.fromJson(Map<String, dynamic> j) => DetectionResult(
-        className: j['className'],
-        confidence: j['confidence'],
-        x: j['x'],
-        y: j['y'],
-        width: j['width'],
-        height: j['height'],
+        className: j['className'] as String,
+        confidence: (j['confidence'] as num).toDouble(),
+        x: (j['x'] as num).toDouble(),
+        y: (j['y'] as num).toDouble(),
+        width: (j['width'] as num).toDouble(),
+        height: (j['height'] as num).toDouble(),
       );
 }
 
@@ -1031,12 +1033,15 @@ class DetectionLog {
         'timestamp': timestamp.toIso8601String(),
       };
   factory DetectionLog.fromJson(Map<String, dynamic> j) => DetectionLog(
-        id: j['id'],
-        imagePath: j['imagePath'],
+        id: j['id'] as String,
+        imagePath: j['imagePath'] as String,
         results: (j['results'] as List)
-            .map((r) => DetectionResult.fromJson(r))
+            .map(
+              (r) =>
+                  DetectionResult.fromJson(Map<String, dynamic>.from(r as Map)),
+            )
             .toList(),
-        timestamp: DateTime.parse(j['timestamp']),
+        timestamp: DateTime.parse(j['timestamp'] as String),
       );
 }
 
@@ -1055,7 +1060,11 @@ class DetectionLogger {
     final result = <DetectionLog>[];
     for (final s in raw) {
       try {
-        result.add(DetectionLog.fromJson(jsonDecode(s)));
+        result.add(
+          DetectionLog.fromJson(
+            Map<String, dynamic>.from(jsonDecode(s) as Map),
+          ),
+        );
       } catch (e) {
         debugPrint('[Doma] skip corrupt log: $e');
       }
@@ -1065,9 +1074,14 @@ class DetectionLogger {
 
   static Future<void> delete(String id) async {
     final p = await SharedPreferences.getInstance();
-    final l = (p.getStringList(_k) ?? [])
-        .where((s) => DetectionLog.fromJson(jsonDecode(s)).id != id)
-        .toList();
+    final l = (p.getStringList(_k) ?? []).where((s) {
+      try {
+        final m = Map<String, dynamic>.from(jsonDecode(s) as Map);
+        return m['id'] != id;
+      } catch (_) {
+        return false;
+      }
+    }).toList();
     await p.setStringList(_k, l);
   }
 
@@ -1076,390 +1090,374 @@ class DetectionLogger {
 }
 
 // ============================================================================
-// CLASSIFIER — v27.1 with auto brightness/contrast normalization
+// CLASSIFIER — unchanged inference logic
 // ============================================================================
 
+double _iou(Rect a, Rect b) {
+  final il = math.max(a.left, b.left);
+  final it = math.max(a.top, b.top);
+  final ir = math.min(a.right, b.right);
+  final ib = math.min(a.bottom, b.bottom);
+  final iW = math.max(0.0, ir - il);
+  final iH = math.max(0.0, ib - it);
+  final iA = iW * iH;
+  final u = a.width * a.height + b.width * b.height - iA;
+  return u <= 0 ? 0 : iA / u;
+}
+
+Map<String, dynamic> _inferenceEntrypoint(Map<String, dynamic> args) {
+  final inputBytes = args['bytes'] as Uint8List;
+  final inputShape = List<int>.from(args['inputShape'] as List);
+  final outputShape = List<int>.from(args['outputShape'] as List);
+  final modelBytes = args['modelBytes'] as Uint8List;
+  final labels = List<String>.from(args['labels'] as List);
+
+  const double rawGate = 0.72;
+  const double iouThres = 0.45;
+
+  img.Image? decoded = img.decodeImage(inputBytes);
+  if (decoded == null || decoded.width < 32 || decoded.height < 32) {
+    return <String, dynamic>{'state': 'notFound', 'dets': <dynamic>[]};
+  }
+  decoded = img.bakeOrientation(decoded);
+
+  final nchw = inputShape.length == 4 && inputShape[1] == 3;
+  final inSz = nchw ? inputShape[2] : inputShape[1];
+
+  final w = decoded.width;
+  final h = decoded.height;
+  final scale = math.min(inSz / w, inSz / h);
+  final newW = (w * scale).round();
+  final newH = (h * scale).round();
+  final padX = ((inSz - newW) / 2).round();
+  final padY = ((inSz - newH) / 2).round();
+
+  final resized = img.copyResize(
+    decoded,
+    width: newW,
+    height: newH,
+    interpolation: img.Interpolation.linear,
+  );
+
+  const padVal = 114 / 255.0;
+  final Float32List inputData;
+
+  if (nchw) {
+    inputData = Float32List(3 * inSz * inSz);
+    for (int i = 0; i < inputData.length; i++) {
+      inputData[i] = padVal;
+    }
+    for (int y = 0; y < newH; y++) {
+      for (int x = 0; x < newW; x++) {
+        final p = resized.getPixel(x, y);
+        final dstY = y + padY;
+        final dstX = x + padX;
+        final idx = dstY * inSz + dstX;
+        inputData[idx] = p.r / 255.0;
+        inputData[inSz * inSz + idx] = p.g / 255.0;
+        inputData[2 * inSz * inSz + idx] = p.b / 255.0;
+      }
+    }
+  } else {
+    inputData = Float32List(inSz * inSz * 3);
+    for (int i = 0; i < inputData.length; i++) {
+      inputData[i] = padVal;
+    }
+    for (int y = 0; y < newH; y++) {
+      for (int x = 0; x < newW; x++) {
+        final p = resized.getPixel(x, y);
+        final dstY = y + padY;
+        final dstX = x + padX;
+        final idx = (dstY * inSz + dstX) * 3;
+        inputData[idx] = p.r / 255.0;
+        inputData[idx + 1] = p.g / 255.0;
+        inputData[idx + 2] = p.b / 255.0;
+      }
+    }
+  }
+
+  final interpreter = Interpreter.fromBuffer(
+    modelBytes,
+    options: InterpreterOptions()..threads = 2,
+  );
+
+  final nCls = labels.length;
+  final cc = 4 + nCls;
+
+  final bool transposed;
+  final int n;
+  if (outputShape.length == 3 && outputShape[1] == cc) {
+    transposed = true;
+    n = outputShape[2];
+  } else if (outputShape.length == 3 && outputShape[2] == cc) {
+    transposed = false;
+    n = outputShape[1];
+  } else {
+    interpreter.close();
+    return <String, dynamic>{'state': 'notFound', 'dets': <dynamic>[]};
+  }
+
+  final List<dynamic> input;
+  if (nchw) {
+    input = List.generate(1, (_) {
+      return List.generate(3, (c) {
+        return List.generate(inSz, (y) {
+          return List<double>.generate(inSz, (x) {
+            return inputData[c * inSz * inSz + y * inSz + x];
+          }, growable: false);
+        }, growable: false);
+      }, growable: false);
+    }, growable: false);
+  } else {
+    input = List.generate(1, (_) {
+      return List.generate(inSz, (y) {
+        return List.generate(inSz, (x) {
+          final idx = (y * inSz + x) * 3;
+          return <double>[
+            inputData[idx],
+            inputData[idx + 1],
+            inputData[idx + 2],
+          ];
+        }, growable: false);
+      }, growable: false);
+    }, growable: false);
+  }
+
+  final List<dynamic> output;
+  if (transposed) {
+    output = List.generate(
+      1,
+      (_) => List.generate(cc, (_) => List<double>.filled(n, 0.0)),
+    );
+  } else {
+    output = List.generate(
+      1,
+      (_) => List.generate(n, (_) => List<double>.filled(cc, 0.0)),
+    );
+  }
+
+  try {
+    interpreter.run(input, output);
+  } catch (e) {
+    interpreter.close();
+    return <String, dynamic>{
+      'state': 'error',
+      'msg': '$e',
+      'dets': <dynamic>[],
+    };
+  }
+  interpreter.close();
+
+  final dets = <Map<String, dynamic>>[];
+  for (int i = 0; i < n; i++) {
+    int bestC = -1;
+    double bestScore = 0;
+    for (int c = 0; c < nCls; c++) {
+      final v = transposed
+          ? (output[0][4 + c][i] as double)
+          : (output[0][i][4 + c] as double);
+      if (v > bestScore) {
+        bestScore = v;
+        bestC = c;
+      }
+    }
+    if (bestScore < rawGate || bestC < 0) continue;
+
+    double cx =
+        transposed ? (output[0][0][i] as double) : (output[0][i][0] as double);
+    double cy =
+        transposed ? (output[0][1][i] as double) : (output[0][i][1] as double);
+    double bw =
+        transposed ? (output[0][2][i] as double) : (output[0][i][2] as double);
+    double bh =
+        transposed ? (output[0][3][i] as double) : (output[0][i][3] as double);
+
+    if (cx.abs() > 1.5 || cy.abs() > 1.5 || bw.abs() > 1.5 || bh.abs() > 1.5) {
+      cx /= inSz;
+      cy /= inSz;
+      bw /= inSz;
+      bh /= inSz;
+    }
+
+    final x1 = (cx - bw / 2) * inSz;
+    final y1 = (cy - bh / 2) * inSz;
+    final x2 = (cx + bw / 2) * inSz;
+    final y2 = (cy + bh / 2) * inSz;
+
+    final ox1 = ((x1 - padX) / scale / w).clamp(0.0, 1.0);
+    final oy1 = ((y1 - padY) / scale / h).clamp(0.0, 1.0);
+    final ox2 = ((x2 - padX) / scale / w).clamp(0.0, 1.0);
+    final oy2 = ((y2 - padY) / scale / h).clamp(0.0, 1.0);
+
+    if (ox2 - ox1 < 0.005 || oy2 - oy1 < 0.005) continue;
+
+    dets.add(<String, dynamic>{
+      'className': labels[bestC],
+      'confidence': bestScore,
+      'x': ox1,
+      'y': oy1,
+      'width': ox2 - ox1,
+      'height': oy2 - oy1,
+      'cls': bestC,
+    });
+  }
+
+  dets.sort(
+    (a, b) => (b['confidence'] as double).compareTo(a['confidence'] as double),
+  );
+  final kept = <Map<String, dynamic>>[];
+  final suppressed = List<bool>.filled(dets.length, false);
+  for (int i = 0; i < dets.length; i++) {
+    if (suppressed[i]) continue;
+    kept.add(dets[i]);
+    for (int j = i + 1; j < dets.length; j++) {
+      if (suppressed[j]) continue;
+      if (dets[i]['cls'] != dets[j]['cls']) continue;
+      final a = Rect.fromLTWH(
+        dets[i]['x'] as double,
+        dets[i]['y'] as double,
+        dets[i]['width'] as double,
+        dets[i]['height'] as double,
+      );
+      final b = Rect.fromLTWH(
+        dets[j]['x'] as double,
+        dets[j]['y'] as double,
+        dets[j]['width'] as double,
+        dets[j]['height'] as double,
+      );
+      if (_iou(a, b) > iouThres) suppressed[j] = true;
+    }
+  }
+
+  final cleaned = kept.map((m) {
+    return <String, dynamic>{
+      'className': m['className'],
+      'confidence': m['confidence'],
+      'x': m['x'],
+      'y': m['y'],
+      'width': m['width'],
+      'height': m['height'],
+    };
+  }).toList();
+
+  return <String, dynamic>{
+    'state': cleaned.isEmpty ? 'notFound' : 'ok',
+    'dets': cleaned,
+  };
+}
+
+enum _ScanState { ok, notFound }
+
+class _ScanResult {
+  final List<DetectionResult> detections;
+  final _ScanState state;
+  const _ScanResult({this.detections = const [], this.state = _ScanState.ok});
+  bool get found => detections.isNotEmpty && state == _ScanState.ok;
+}
+
 class CamoteClassifier {
-  Interpreter? _interp;
+  bool _loaded = false;
   int _inSz = 640;
   bool _nchw = false;
+  List<int> _inputShape = const [1, 640, 640, 3];
+  List<int> _outputShape = const [1, 8, 8400];
+  Uint8List? _modelBytes;
 
-  // Confidence gate: below 75% will not be shown
-  static const double _rawGate = 0.75;
-  static const double _displayGate = 0.75;
-  static const double _iouThres = 0.45;
   static const List<String> labels = ['kadabaw', 'kadulaw', 'minamon', 'tapol'];
 
   Future<void> loadModel() async {
+    if (_loaded) return;
     try {
       debugPrint('[Doma] ══════════ LOAD MODEL ══════════');
-      _interp = await Interpreter.fromAsset(
-        'assets/best_float32.tflite',
-        options: InterpreterOptions()..threads = 4,
+
+      final data = await rootBundle.load('assets/best_float32.tflite');
+      _modelBytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
       );
 
-      final inT = _interp!.getInputTensor(0);
-      final inShape = inT.shape;
-      debugPrint('[Doma] IN  name=${inT.name} shape=$inShape type=${inT.type}');
-
-      if (inShape.length == 4) {
-        if (inShape[1] == 3) {
+      final interp = await Interpreter.fromAsset(
+        'assets/best_float32.tflite',
+        options: InterpreterOptions()..threads = 2,
+      );
+      _inputShape = List<int>.from(interp.getInputTensor(0).shape);
+      _outputShape = List<int>.from(interp.getOutputTensor(0).shape);
+      if (_inputShape.length == 4) {
+        if (_inputShape[1] == 3) {
           _nchw = true;
-          _inSz = inShape[2];
+          _inSz = _inputShape[2];
         } else {
           _nchw = false;
-          _inSz = inShape[1];
+          _inSz = _inputShape[1];
         }
       }
+      interp.close();
 
-      final outT = _interp!.getOutputTensor(0);
-      debugPrint('[Doma] OUT name=${outT.name} '
-          'shape=${outT.shape} type=${outT.type}');
-      debugPrint('[Doma] NCHW=$_nchw inSz=$_inSz');
+      debugPrint(
+        '[Doma] IN=$_inputShape OUT=$_outputShape NCHW=$_nchw SZ=$_inSz',
+      );
+      _loaded = true;
     } catch (e, st) {
       debugPrint('[Doma] ❌ load err: $e\n$st');
     }
   }
 
-  void dispose() => _interp?.close();
+  void dispose() {}
 
   Future<_ScanResult> detect(File f) async {
     try {
-      if (_interp == null) await loadModel();
-      if (_interp == null) return const _ScanResult(state: _ScanState.notFound);
-
-      final bytes = await f.readAsBytes();
-      if (bytes.isEmpty) return const _ScanResult(state: _ScanState.notFound);
-
-      img.Image? im = img.decodeImage(bytes);
-      if (im == null || im.width < 32 || im.height < 32) {
+      if (!_loaded) await loadModel();
+      if (!_loaded || _modelBytes == null) {
         return const _ScanResult(state: _ScanState.notFound);
       }
-      debugPrint('[Doma] decoded image ${im.width}x${im.height}');
-      return _infer(im);
+
+      final bytes = await f.readAsBytes();
+      if (bytes.isEmpty) {
+        return const _ScanResult(state: _ScanState.notFound);
+      }
+
+      final inputShape = List<int>.from(_inputShape);
+      final outputShape = List<int>.from(_outputShape);
+      final modelBytes = _modelBytes!;
+      final labelList = List<String>.from(labels);
+
+      final result = await Isolate.run(() {
+        return _inferenceEntrypoint(<String, dynamic>{
+          'bytes': bytes,
+          'inputShape': inputShape,
+          'outputShape': outputShape,
+          'modelBytes': modelBytes,
+          'labels': labelList,
+        });
+      });
+
+      if (result['state'] != 'ok') {
+        return const _ScanResult(state: _ScanState.notFound);
+      }
+
+      final rawDets = (result['dets'] as List);
+      final dets = rawDets.map((d) {
+        final m = Map<String, dynamic>.from(d as Map);
+        return DetectionResult(
+          className: m['className'] as String,
+          confidence: (m['confidence'] as num).toDouble(),
+          x: (m['x'] as num).toDouble(),
+          y: (m['y'] as num).toDouble(),
+          width: (m['width'] as num).toDouble(),
+          height: (m['height'] as num).toDouble(),
+        );
+      }).toList();
+
+      return _ScanResult(detections: dets, state: _ScanState.ok);
     } catch (e, st) {
       debugPrint('[Doma] ❌ detect err: $e\n$st');
       return const _ScanResult(state: _ScanState.notFound);
     }
   }
-
-  /// Auto brightness + contrast + letterbox. Builds a nested list matching
-  /// the model's input shape.
-  List<dynamic> _buildInput(img.Image source) {
-    // ── 1. Compute mean brightness from a subsampled grid ───────────────
-    double sumR = 0, sumG = 0, sumB = 0;
-    int count = 0;
-    final step = math.max(1, source.width ~/ 64);
-    for (int y = 0; y < source.height; y += step) {
-      for (int x = 0; x < source.width; x += step) {
-        final p = source.getPixel(x, y);
-        sumR += p.r;
-        sumG += p.g;
-        sumB += p.b;
-        count++;
-      }
-    }
-    final avgR = sumR / count, avgG = sumG / count, avgB = sumB / count;
-    final avg = (avgR + avgG + avgB) / 3.0;
-
-    // ── 2. Decide brightness + contrast factors ─────────────────────────
-    final brightnessFactor = avg < 60
-        ? 1.35
-        : avg < 100
-            ? 1.15
-            : avg > 200
-                ? 0.92
-                : avg > 160
-                    ? 0.97
-                    : 1.0;
-
-    final contrastFactor = avg < 80
-        ? 1.15
-        : avg > 180
-            ? 1.03
-            : 1.07;
-
-    img.Image enhanced = source;
-    if (brightnessFactor != 1.0 || contrastFactor != 1.0) {
-      enhanced = img.Image(width: source.width, height: source.height);
-      for (int y = 0; y < source.height; y++) {
-        for (int x = 0; x < source.width; x++) {
-          final p = source.getPixel(x, y);
-          double r = p.r * brightnessFactor;
-          double g = p.g * brightnessFactor;
-          double b = p.b * brightnessFactor;
-          r = 128 + (r - 128) * contrastFactor;
-          g = 128 + (g - 128) * contrastFactor;
-          b = 128 + (b - 128) * contrastFactor;
-          enhanced.setPixel(
-            x,
-            y,
-            img.ColorRgb8(
-              r.clamp(0, 255).toInt(),
-              g.clamp(0, 255).toInt(),
-              b.clamp(0, 255).toInt(),
-            ),
-          );
-        }
-      }
-      debugPrint('[Doma] enhanced: avg=${avg.toStringAsFixed(0)} '
-          'bright=${brightnessFactor.toStringAsFixed(2)} '
-          'contrast=${contrastFactor.toStringAsFixed(2)}');
-    } else {
-      debugPrint('[Doma] enhanced: avg=${avg.toStringAsFixed(0)} (no change)');
-    }
-
-    // ── 3. Letterbox + normalize ────────────────────────────────────────
-    final sz = _inSz;
-    final w = enhanced.width, h = enhanced.height;
-    final sc = math.min(sz / w, sz / h);
-    final nW = (w * sc).floor(), nH = (h * sc).floor();
-    final pX = ((sz - nW) ~/ 2), pY = ((sz - nH) ~/ 2);
-    const pv = 114.0 / 255.0;
-    final inv = 1.0 / sc;
-
-    if (_nchw) {
-      final out = List.generate(
-        1,
-        (_) => List.generate(
-            3, (_) => List.generate(sz, (_) => List.filled(sz, pv))),
-      );
-      for (int y = 0; y < nH; y++) {
-        final sy = (y + 0.5) * inv;
-        final y0 = (sy - 0.5).floor().clamp(0, h - 1);
-        final y1 = (y0 + 1).clamp(0, h - 1);
-        final fy = (sy - y0 - 0.5).clamp(0.0, 1.0).toDouble();
-        for (int x = 0; x < nW; x++) {
-          final sx = (x + 0.5) * inv;
-          final x0 = (sx - 0.5).floor().clamp(0, w - 1);
-          final x1 = (x0 + 1).clamp(0, w - 1);
-          final fx = (sx - x0 - 0.5).clamp(0.0, 1.0).toDouble();
-          final q00 = enhanced.getPixel(x0, y0),
-              q10 = enhanced.getPixel(x1, y0);
-          final q01 = enhanced.getPixel(x0, y1),
-              q11 = enhanced.getPixel(x1, y1);
-          double bi(num a, num b, num c, num d) => (a * (1 - fx) * (1 - fy) +
-                  b * fx * (1 - fy) +
-                  c * (1 - fx) * fy +
-                  d * fx * fy)
-              .clamp(0, 255)
-              .toDouble();
-          final px = pX + x, py = pY + y;
-          out[0][0][py][px] = bi(q00.r, q10.r, q01.r, q11.r) / 255.0;
-          out[0][1][py][px] = bi(q00.g, q10.g, q01.g, q11.g) / 255.0;
-          out[0][2][py][px] = bi(q00.b, q10.b, q01.b, q11.b) / 255.0;
-        }
-      }
-      return out;
-    } else {
-      final out = List.generate(
-        1,
-        (_) => List.generate(
-            sz, (_) => List.generate(sz, (_) => List.filled(3, pv))),
-      );
-      for (int y = 0; y < nH; y++) {
-        final sy = (y + 0.5) * inv;
-        final y0 = (sy - 0.5).floor().clamp(0, h - 1);
-        final y1 = (y0 + 1).clamp(0, h - 1);
-        final fy = (sy - y0 - 0.5).clamp(0.0, 1.0).toDouble();
-        for (int x = 0; x < nW; x++) {
-          final sx = (x + 0.5) * inv;
-          final x0 = (sx - 0.5).floor().clamp(0, w - 1);
-          final x1 = (x0 + 1).clamp(0, w - 1);
-          final fx = (sx - x0 - 0.5).clamp(0.0, 1.0).toDouble();
-          final q00 = enhanced.getPixel(x0, y0),
-              q10 = enhanced.getPixel(x1, y0);
-          final q01 = enhanced.getPixel(x0, y1),
-              q11 = enhanced.getPixel(x1, y1);
-          double bi(num a, num b, num c, num d) => (a * (1 - fx) * (1 - fy) +
-                  b * fx * (1 - fy) +
-                  c * (1 - fx) * fy +
-                  d * fx * fy)
-              .clamp(0, 255)
-              .toDouble();
-          final px = pX + x, py = pY + y;
-          out[0][py][px][0] = bi(q00.r, q10.r, q01.r, q11.r) / 255.0;
-          out[0][py][px][1] = bi(q00.g, q10.g, q01.g, q11.g) / 255.0;
-          out[0][py][px][2] = bi(q00.b, q10.b, q01.b, q11.b) / 255.0;
-        }
-      }
-      return out;
-    }
-  }
-
-  _ScanResult _infer(img.Image image) {
-    final nCls = labels.length;
-    final CC = 4 + nCls;
-    final oShape = _interp!.getOutputTensor(0).shape;
-
-    bool transposed;
-    int N;
-    if (oShape.length == 3 && oShape[1] == CC) {
-      transposed = true;
-      N = oShape[2];
-    } else if (oShape.length == 3 && oShape[2] == CC) {
-      transposed = false;
-      N = oShape[1];
-    } else {
-      debugPrint('[Doma] ⚠️ unexpected output shape $oShape');
-      return const _ScanResult(state: _ScanState.notFound);
-    }
-    debugPrint('[Doma] inference: oShape=$oShape '
-        'transposed=$transposed N=$N CC=$CC');
-
-    final input = _buildInput(image);
-
-    final outBuf = transposed
-        ? List.generate(
-            1,
-            (_) => List.generate(CC, (_) => List<double>.filled(N, 0.0)),
-          )
-        : List.generate(
-            1,
-            (_) => List.generate(N, (_) => List<double>.filled(CC, 0.0)),
-          );
-
-    try {
-      _interp!.run(input, outBuf);
-      debugPrint('[Doma] ✅ inference ran');
-    } catch (e, st) {
-      debugPrint('[Doma] ❌ RUN FAILED: $e\n$st');
-      return const _ScanResult(state: _ScanState.notFound);
-    }
-
-    final preds = List.generate(N, (i) => List<double>.filled(CC, 0.0));
-    for (int n = 0; n < N; n++) {
-      for (int c = 0; c < CC; c++) {
-        preds[n][c] = transposed ? outBuf[0][c][n] : outBuf[0][n][c];
-      }
-    }
-
-    double maxScore = -1e9;
-    int maxI = 0, maxC = 0;
-    for (int n = 0; n < N; n++) {
-      for (int c = 0; c < nCls; c++) {
-        final v = preds[n][4 + c];
-        if (v > maxScore) {
-          maxScore = v;
-          maxI = n;
-          maxC = c;
-        }
-      }
-    }
-    debugPrint('[Doma] MAX raw cls score=${maxScore.toStringAsFixed(4)} '
-        'at i=$maxI c=$maxC (${labels[maxC]})');
-
-    final raw = _parse(preds, nCls, _inSz);
-    debugPrint('[Doma] parsed=${raw.length}');
-    final mapped = _unmap(raw, image.width.toDouble(), image.height.toDouble());
-    debugPrint('[Doma] unmap=${mapped.length}');
-    final nmsed = _nms(mapped);
-    debugPrint('[Doma] nms=${nmsed.length}');
-
-    if (nmsed.isEmpty) return const _ScanResult(state: _ScanState.notFound);
-
-    final dets = nmsed
-        .map(
-          (w) => DetectionResult(
-            className: labels[w.cls.clamp(0, labels.length - 1).toInt()],
-            confidence: w.score,
-            x: w.box.left,
-            y: w.box.top,
-            width: w.box.width,
-            height: w.box.height,
-          ),
-        )
-        .toList();
-    debugPrint('[Doma] ✅ FINAL detections: ${dets.length}');
-    return _ScanResult(detections: dets, state: _ScanState.ok);
-  }
-
-  List<_Det> _parse(List<List<double>> preds, int nCls, int sz) {
-    final dets = <_Det>[];
-    for (final p in preds) {
-      if (p.length < 4 + nCls) continue;
-
-      double best = 0;
-      int bestC = -1;
-      for (int c = 0; c < nCls; c++) {
-        final v = p[4 + c];
-        if (v > best) {
-          best = v;
-          bestC = c;
-        }
-      }
-      if (best < _rawGate || bestC < 0) continue;
-
-      double cx = p[0], cy = p[1], w = p[2], h = p[3];
-      if (cx.abs() <= 1.5 &&
-          cy.abs() <= 1.5 &&
-          w.abs() <= 1.5 &&
-          h.abs() <= 1.5) {
-        cx *= sz;
-        cy *= sz;
-        w *= sz;
-        h *= sz;
-      }
-
-      double x1 = cx - w / 2, y1 = cy - h / 2, x2 = cx + w / 2, y2 = cy + h / 2;
-      if (x2 <= x1 || y2 <= y1) continue;
-      if (x2 <= 0 || y2 <= 0 || x1 >= sz || y1 >= sz) continue;
-
-      final bw = x2 - x1, bh = y2 - y1;
-      if (bw < 2 || bh < 2) continue;
-      final areaFrac = (bw * bh) / (sz * sz);
-      if (areaFrac < 0.0005 || areaFrac > 0.99) continue;
-
-      dets.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), bestC, best));
-    }
-    dets.sort((a, b) => b.score.compareTo(a.score));
-    return dets.length > 300 ? dets.sublist(0, 300) : dets;
-  }
-
-  List<_Det> _unmap(List<_Det> dets, double srcW, double srcH) {
-    final sz = _inSz.toDouble();
-    final sc = math.min(sz / srcW, sz / srcH);
-    final pX = (sz - srcW * sc) / 2.0, pY = (sz - srcH * sc) / 2.0;
-    final out = <_Det>[];
-    for (final d in dets) {
-      final x1 = ((d.box.left - pX) / sc / srcW).clamp(0.0, 1.0).toDouble();
-      final y1 = ((d.box.top - pY) / sc / srcH).clamp(0.0, 1.0).toDouble();
-      final x2 = ((d.box.right - pX) / sc / srcW).clamp(0.0, 1.0).toDouble();
-      final y2 = ((d.box.bottom - pY) / sc / srcH).clamp(0.0, 1.0).toDouble();
-      if ((x2 - x1) < 0.005 || (y2 - y1) < 0.005) continue;
-      out.add(_Det(Rect.fromLTRB(x1, y1, x2, y2), d.cls, d.score));
-    }
-    return out;
-  }
-
-  List<_Det> _nms(List<_Det> dets) {
-    if (dets.isEmpty) return [];
-    dets.sort((a, b) => b.score.compareTo(a.score));
-    final sup = List<bool>.filled(dets.length, false);
-    final keep = <_Det>[];
-    for (int i = 0; i < dets.length; i++) {
-      if (sup[i]) continue;
-      keep.add(dets[i]);
-      for (int j = i + 1; j < dets.length; j++) {
-        if (sup[j]) continue;
-        if (_iou(dets[i].box, dets[j].box) > _iouThres) sup[j] = true;
-      }
-    }
-    return keep;
-  }
-
-  double _iou(Rect a, Rect b) {
-    final il = math.max(a.left, b.left), it = math.max(a.top, b.top);
-    final ir = math.min(a.right, b.right), ib = math.min(a.bottom, b.bottom);
-    final iW = math.max(0.0, ir - il), iH = math.max(0.0, ib - it);
-    final iA = iW * iH;
-    final u = a.width * a.height + b.width * b.height - iA;
-    return u <= 0 ? 0 : iA / u;
-  }
 }
 
 // ============================================================================
-// PAINTERS
+// PAINTERS — refined for modern look
 // ============================================================================
 
 class _BBPainter extends CustomPainter {
@@ -1497,12 +1495,15 @@ class _BBPainter extends CustomPainter {
         dim > 0.001 &&
         dets.any((d) => d.className.toLowerCase() == hi);
 
-    Rect rectOf(DetectionResult d) => Rect.fromLTWH(
-          d.x * displayWidth + offsetX,
-          d.y * displayHeight + offsetY,
-          d.width * displayWidth,
-          d.height * displayHeight,
-        );
+    final rects = List<Rect>.generate(dets.length, (i) {
+      final d = dets[i];
+      return Rect.fromLTWH(
+        d.x * displayWidth + offsetX,
+        d.y * displayHeight + offsetY,
+        d.width * displayWidth,
+        d.height * displayHeight,
+      );
+    });
 
     if (hasHi) {
       canvas.saveLayer(Offset.zero & size, Paint());
@@ -1510,9 +1511,9 @@ class _BBPainter extends CustomPainter {
         Offset.zero & size,
         Paint()..color = Colors.black.withOpacity(0.68 * dim),
       );
-      for (final d in dets) {
-        if (d.className.toLowerCase() != hi) continue;
-        canvas.drawRect(rectOf(d), Paint()..blendMode = BlendMode.clear);
+      for (int i = 0; i < dets.length; i++) {
+        if (dets[i].className.toLowerCase() != hi) continue;
+        canvas.drawRect(rects[i], Paint()..blendMode = BlendMode.clear);
       }
       canvas.restore();
     }
@@ -1524,16 +1525,11 @@ class _BBPainter extends CustomPainter {
 
       final base = _accent(d.className);
       final color = isDim ? base.withOpacity(0.28) : base;
-      final r = rectOf(d);
+      final r = rects[i];
 
       final soloBoost = (emphasiseSolo && dets.length == 1) ? 0.5 : 0.0;
       final strokeW =
           isHi ? (2.2 + soloBoost) : (multi ? 1.5 : 1.8) + soloBoost;
-
-      final boxP = Paint()
-        ..color = color
-        ..strokeWidth = strokeW
-        ..style = PaintingStyle.stroke;
 
       if (isHi) {
         canvas.drawRect(
@@ -1560,7 +1556,13 @@ class _BBPainter extends CustomPainter {
             ..style = PaintingStyle.stroke,
         );
       }
-      canvas.drawRect(r, boxP);
+      canvas.drawRect(
+        r,
+        Paint()
+          ..color = color
+          ..strokeWidth = strokeW
+          ..style = PaintingStyle.stroke,
+      );
 
       final labelOpacity = isDim ? 0.25 : 1.0;
       final lbl = multi ? '${i + 1}. ${d.className.cap}' : d.className.cap;
@@ -1585,7 +1587,6 @@ class _BBPainter extends CustomPainter {
       final labelW = tp.width + padH * 2;
 
       final placeAbove = r.top - labelH - 4 >= 0;
-
       final double labelTop = placeAbove
           ? r.top - labelH - 4
           : (r.bottom + 4).clamp(0.0, ch - labelH).toDouble();
@@ -1599,19 +1600,10 @@ class _BBPainter extends CustomPainter {
         labelR.shift(const Offset(0, 1.5)),
         Paint()..color = Colors.black.withOpacity(0.30 * labelOpacity),
       );
-
       canvas.drawRRect(
         labelR,
         Paint()..color = base.withOpacity(0.96 * labelOpacity),
       );
-
-      canvas.save();
-      canvas.clipRRect(labelR);
-      canvas.drawRect(
-        Rect.fromLTWH(bgR.left, bgR.top, bgR.width, 1.2),
-        Paint()..color = Colors.white.withOpacity(0.22 * labelOpacity),
-      );
-      canvas.restore();
 
       tp.paint(canvas, Offset(bgR.left + padH, bgR.top + padV));
     }
@@ -1646,11 +1638,16 @@ class _ScanFramePainter extends CustomPainter {
     );
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(radius));
 
-    final dashPaint = Paint()
-      ..color = C.primaryMid.withOpacity(0.28)
-      ..strokeWidth = 1.4
-      ..style = PaintingStyle.stroke;
-    _drawDashedRRect(canvas, rrect, dashPaint, 6, 6);
+    _drawDashedRRect(
+      canvas,
+      rrect,
+      Paint()
+        ..color = C.primaryMid.withOpacity(0.28)
+        ..strokeWidth = 1.4
+        ..style = PaintingStyle.stroke,
+      6,
+      6,
+    );
 
     final accent = C.primaryMid;
     final cornerPaint = Paint()
@@ -1725,7 +1722,7 @@ class _ScanFramePainter extends CustomPainter {
 }
 
 // ============================================================================
-// UNIFIED COMPONENTS
+// UNIFIED COMPONENTS — modernized
 // ============================================================================
 
 class _Card extends StatelessWidget {
@@ -1734,12 +1731,14 @@ class _Card extends StatelessWidget {
   final BorderRadius? radius;
   final Color? borderColor;
   final Color? color;
+  final List<BoxShadow>? shadow;
   const _Card({
     required this.child,
     this.padding,
     this.radius,
     this.borderColor,
     this.color,
+    this.shadow,
   });
   @override
   Widget build(BuildContext context) => Container(
@@ -1749,13 +1748,14 @@ class _Card extends StatelessWidget {
           color: color ?? C.surface,
           borderRadius: radius ?? BorderRadius.circular(C.radiusCard),
           border: Border.all(color: borderColor ?? C.border),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
+          boxShadow: shadow ??
+              const [
+                BoxShadow(
+                  color: Color(0x06000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 4),
+                ),
+              ],
         ),
         child: child,
       );
@@ -1796,9 +1796,9 @@ class _TappableCardState extends State<_TappableCard> {
             boxShadow: [
               BoxShadow(
                 color: _pressed
-                    ? C.primary.withOpacity(0.1)
-                    : const Color(0x0A000000),
-                blurRadius: _pressed ? 14 : 10,
+                    ? C.primary.withOpacity(0.08)
+                    : const Color(0x06000000),
+                blurRadius: _pressed ? 16 : 12,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -1824,7 +1824,7 @@ class _SectionHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(width: 9),
+          const SizedBox(width: 10),
           Expanded(child: Text(title, style: T.heading)),
           if (trailing != null) trailing!,
         ],
@@ -1932,7 +1932,7 @@ class _CharRow extends StatelessWidget {
               height: 32,
               decoration: BoxDecoration(
                 color: C.primaryTint,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(9),
               ),
               child: Icon(icon, size: 15, color: C.primary),
             ),
@@ -1971,7 +1971,7 @@ class _Stagger extends StatefulWidget {
   const _Stagger({
     required this.child,
     required this.index,
-    this.delay = const Duration(milliseconds: 60),
+    this.delay = const Duration(milliseconds: 45),
   });
   @override
   State<_Stagger> createState() => _StaggerState();
@@ -1982,25 +1982,28 @@ class _StaggerState extends State<_Stagger>
   late AnimationController _ctrl;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 380),
+      duration: const Duration(milliseconds: 300),
     );
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.07),
+      begin: const Offset(0, 0.05),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
-    Future.delayed(widget.delay * widget.index, () {
+    _timer = Timer(widget.delay * widget.index, () {
       if (mounted) _ctrl.forward();
     });
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -2033,70 +2036,65 @@ class _ImageCarouselState extends State<_ImageCarousel> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(C.radiusCard),
-            child: SizedBox(
-              height: 240,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  PageView.builder(
-                    controller: _pc,
-                    itemCount: widget.imagePaths.length,
-                    onPageChanged: (i) => setState(() => _current = i),
-                    itemBuilder: (_, i) => Image.asset(
-                      widget.imagePaths[i],
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: C.bg,
-                        child: const Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            size: 48,
-                            color: C.textMuted,
-                          ),
-                        ),
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(C.radiusCard),
+        child: SizedBox(
+          height: 240,
+          width: double.infinity,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              PageView.builder(
+                controller: _pc,
+                itemCount: widget.imagePaths.length,
+                onPageChanged: (i) => setState(() => _current = i),
+                itemBuilder: (_, i) => Image.asset(
+                  widget.imagePaths[i],
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: C.bg,
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 48,
+                        color: C.textMuted,
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: 10,
-                    left: 0,
-                    right: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(widget.imagePaths.length, (i) {
-                        final active = i == _current;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          width: active ? 18 : 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: active
-                                ? Colors.white
-                                : Colors.white.withOpacity(0.55),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+              Positioned(
+                bottom: 10,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(widget.imagePaths.length, (i) {
+                    final active = i == _current;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: active ? 18 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       );
 }
 
 // ============================================================================
-// ANALYZING OVERLAY
+// ANALYZING OVERLAY — modernized
 // ============================================================================
-
 class _AnalyzingOverlay extends StatefulWidget {
   const _AnalyzingOverlay();
 
@@ -2108,8 +2106,9 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
     with TickerProviderStateMixin {
   late AnimationController _spinCtrl;
   late AnimationController _fadeCtrl;
-  late AnimationController _progressCtrl;
+  late AnimationController _pulseCtrl;
   late Animation<double> _fade;
+  late Animation<double> _pulse;
 
   int _dots = 0;
   Timer? _dotTimer;
@@ -2120,22 +2119,23 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
 
     _spinCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: const Duration(milliseconds: 900),
     )..repeat();
 
     _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 260),
+      duration: const Duration(milliseconds: 300),
     )..forward();
 
-    _progressCtrl = AnimationController(
+    _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
 
-    _fade = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _fade = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic);
+    _pulse = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut);
 
-    _dotTimer = Timer.periodic(const Duration(milliseconds: 400), (_) {
+    _dotTimer = Timer.periodic(const Duration(milliseconds: 380), (_) {
       if (mounted) setState(() => _dots = (_dots + 1) % 4);
     });
   }
@@ -2144,7 +2144,7 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
   void dispose() {
     _spinCtrl.dispose();
     _fadeCtrl.dispose();
-    _progressCtrl.dispose();
+    _pulseCtrl.dispose();
     _dotTimer?.cancel();
     super.dispose();
   }
@@ -2154,131 +2154,97 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
     return Positioned.fill(
       child: FadeTransition(
         opacity: _fade,
-        child: Material(
-          color: Colors.white,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 120,
-                  height: 120,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: C.primaryLight,
-                            width: 4,
-                          ),
-                        ),
-                      ),
-                      AnimatedBuilder(
-                        animation: _spinCtrl,
-                        builder: (_, __) => Transform.rotate(
-                          angle: _spinCtrl.value * 2 * math.pi,
-                          child: CustomPaint(
-                            size: const Size(120, 120),
-                            painter: const _SpinnerArcPainter(
-                              color: C.primary,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Image.asset(
-                        'assets/images/logo.png',
-                        width: 70,
-                        height: 70,
-                        fit: BoxFit.contain,
-                      ),
-                    ],
+        child: RepaintBoundary(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ColoredBox(color: C.primaryDeep.withOpacity(0.92)),
+              AnimatedBuilder(
+                animation: _pulse,
+                builder: (_, __) => DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 0.85,
+                      colors: [
+                        C.primaryMid.withOpacity(0.18 * _pulse.value),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 32),
-                Row(
+              ),
+              Center(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    const Text(
-                      'Analyzing',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: C.textPrimary,
-                        letterSpacing: -0.3,
+                    SizedBox(
+                      width: 85,
+                      height: 85,
+                      child: AnimatedBuilder(
+                        animation: _spinCtrl,
+                        builder: (_, __) => CustomPaint(
+                          size: const Size(85, 85),
+                          painter: _RadialBarSpinnerPainter(
+                            progress: _spinCtrl.value,
+                            color: C.primaryMid,
+                            barCount: 12,
+                          ),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        const Text(
+                          'Analyzing camote',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.2,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black54,
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '.' * _dots,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: C.primaryMid,
+                            letterSpacing: -0.2,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black54,
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     Text(
-                      '.' * _dots,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: C.primary,
-                        letterSpacing: -0.3,
+                      'Identifying variety',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.55),
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Identifying camote variety',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: C.textSec,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: 200,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: SizedBox(
-                      height: 5,
-                      child: AnimatedBuilder(
-                        animation: _progressCtrl,
-                        builder: (_, __) => Stack(
-                          children: [
-                            Container(color: C.primaryLight),
-                            Positioned.fill(
-                              child: FractionallySizedBox(
-                                alignment: Alignment.centerLeft,
-                                widthFactor: 0.35,
-                                child: Transform.translate(
-                                  offset: Offset(
-                                    _progressCtrl.value * 140,
-                                    0,
-                                  ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          C.primaryLight,
-                                          C.primary,
-                                          C.primaryLight,
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2286,31 +2252,72 @@ class _AnalyzingOverlayState extends State<_AnalyzingOverlay>
   }
 }
 
-class _SpinnerArcPainter extends CustomPainter {
+// ============================================================================
+// 12-bar radial spinner
+// ============================================================================
+
+class _RadialBarSpinnerPainter extends CustomPainter {
+  final double progress;
   final Color color;
-  const _SpinnerArcPainter({required this.color});
+  final int barCount;
+
+  _RadialBarSpinnerPainter({
+    required this.progress,
+    required this.color,
+    this.barCount = 12,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromCircle(
-      center: Offset(size.width / 2, size.height / 2),
-      radius: (size.width / 2) - 2,
-    );
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
 
-    canvas.drawArc(rect, -math.pi / 2, math.pi * 0.66, false, paint);
+    final barWidth = radius * 0.20;
+    final barLength = radius * 0.34;
+    final innerRadius = radius - barLength;
+    final cornerRadius = barWidth / 2;
+
+    final headIndex = (progress * barCount).floor() % barCount;
+
+    for (int i = 0; i < barCount; i++) {
+      final dist = (headIndex - i + barCount) % barCount;
+      final t = dist / barCount;
+      final opacity = (1.0 - t * 0.9).clamp(0.0, 1.0);
+
+      final angle = (i / barCount) * 2 * math.pi - math.pi / 2;
+
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(angle);
+
+      final paint = Paint()
+        ..color = color.withOpacity(opacity)
+        ..style = PaintingStyle.fill;
+
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          -barWidth / 2,
+          -innerRadius - barLength,
+          barWidth,
+          barLength,
+        ),
+        Radius.circular(cornerRadius),
+      );
+
+      canvas.drawRRect(rect, paint);
+      canvas.restore();
+    }
   }
 
   @override
-  bool shouldRepaint(_SpinnerArcPainter o) => o.color != color;
+  bool shouldRepaint(covariant _RadialBarSpinnerPainter old) =>
+      old.progress != progress ||
+      old.color != color ||
+      old.barCount != barCount;
 }
 
 // ============================================================================
-// APP BAR
+// APP BAR — refined modern
 // ============================================================================
 
 PreferredSizeWidget _appBar(
@@ -2321,18 +2328,18 @@ PreferredSizeWidget _appBar(
     AppBar(
       backgroundColor: C.surface,
       surfaceTintColor: C.surface,
-      scrolledUnderElevation: 0.5,
+      scrolledUnderElevation: 0,
       elevation: 0,
-      shadowColor: C.border,
+      shadowColor: Colors.transparent,
       leading: leading,
-      titleSpacing: leading == null ? null : 0,
+      titleSpacing: leading == null ? 20 : 0,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: C.primaryLight,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(11),
             ),
             child: Image.asset(
               'assets/images/logo.png',
@@ -2341,14 +2348,14 @@ PreferredSizeWidget _appBar(
               fit: BoxFit.contain,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 11),
           Text(
             title,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: C.textPrimary,
-              letterSpacing: -0.3,
+              letterSpacing: -0.4,
             ),
           ),
         ],
@@ -2371,9 +2378,16 @@ class DomaApp extends StatelessWidget {
         title: 'Doma – Camote Classifier',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          primarySwatch: Colors.green,
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: C.primary,
+            primary: C.primary,
+            surface: C.surface,
+            brightness: Brightness.light,
+          ),
           scaffoldBackgroundColor: C.bg,
           fontFamily: 'Roboto',
+          splashFactory: InkSparkle.splashFactory,
           scrollbarTheme: ScrollbarThemeData(
             thumbColor: WidgetStateProperty.all(C.primary.withOpacity(0.55)),
             trackColor: WidgetStateProperty.all(C.primary.withOpacity(0.08)),
@@ -2407,22 +2421,23 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _ctrl;
   late Animation<double> _scale;
   late Animation<double> _fade;
+  Timer? _navTimer;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 750),
+      duration: const Duration(milliseconds: 650),
     );
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack);
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
     _ctrl.forward();
-    Timer(const Duration(milliseconds: 1900), () {
+    _navTimer = Timer(const Duration(milliseconds: 1700), () {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 450),
+          transitionDuration: const Duration(milliseconds: 400),
           pageBuilder: (_, __, ___) => const MainNavigation(),
           transitionsBuilder: (_, anim, __, child) =>
               FadeTransition(opacity: anim, child: child),
@@ -2433,6 +2448,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _navTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -2450,37 +2466,44 @@ class _SplashScreenState extends State<SplashScreen>
                     scale: _scale,
                     child: FadeTransition(
                       opacity: _fade,
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        width: 140,
-                        height: 140,
-                        fit: BoxFit.contain,
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: C.primaryTint,
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   FadeTransition(
                     opacity: _fade,
                     child: const Text(
-                      'Doma App',
+                      'Doma',
                       style: TextStyle(
-                        color: C.primary,
-                        fontSize: 30,
+                        color: C.textPrimary,
+                        fontSize: 32,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -0.6,
+                        letterSpacing: -0.8,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   FadeTransition(
                     opacity: _fade,
                     child: Text(
-                      'Camote Classifier',
+                      'CAMOTE CLASSIFIER',
                       style: TextStyle(
-                        color: C.primary.withOpacity(0.7),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.4,
+                        color: C.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2.4,
                       ),
                     ),
                   ),
@@ -2521,44 +2544,31 @@ class TimeFormatter {
     return '${dt.month}/${dt.day}/${dt.year}';
   }
 
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
   static String short(DateTime dt) {
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
     final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
     final min = dt.minute.toString().padLeft(2, '0');
-    return '${m[dt.month - 1]} ${dt.day}  $h:$min ${dt.hour < 12 ? "AM" : "PM"}';
+    return '${_months[dt.month - 1]} ${dt.day}  $h:$min ${dt.hour < 12 ? "AM" : "PM"}';
   }
 
   static String full(DateTime dt) {
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
     final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
     final min = dt.minute.toString().padLeft(2, '0');
-    return '${m[dt.month - 1]} ${dt.day}, ${dt.year}  •  $h:$min ${dt.hour < 12 ? "AM" : "PM"}';
+    return '${_months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $h:$min ${dt.hour < 12 ? "AM" : "PM"}';
   }
 }
 
@@ -2652,7 +2662,7 @@ class _MainNavigationState extends State<MainNavigation> {
 }
 
 // ============================================================================
-// BOTTOM NAV
+// BOTTOM NAV — modern pill indicator
 // ============================================================================
 
 class _BottomNav extends StatelessWidget {
@@ -2663,7 +2673,7 @@ class _BottomNav extends StatelessWidget {
   static const _items = [
     (Icons.camera_alt_outlined, Icons.camera_alt_rounded, 'Scan'),
     (Icons.analytics_outlined, Icons.analytics_rounded, 'Results'),
-    (Icons.history_outlined, Icons.history_rounded, 'Detections'),
+    (Icons.history_outlined, Icons.history_rounded, 'History'),
     (Icons.photo_library_outlined, Icons.photo_library_rounded, 'Library'),
   ];
 
@@ -2675,7 +2685,7 @@ class _BottomNav extends StatelessWidget {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(_items.length, (i) {
@@ -2685,30 +2695,15 @@ class _BottomNav extends StatelessWidget {
                   onTap: () => onTap(i),
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 240),
+                    duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOutCubic,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
-                      vertical: 7,
+                      vertical: 8,
                     ),
                     decoration: BoxDecoration(
                       color: sel ? C.primaryLight : Colors.transparent,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: sel
-                            ? C.primary.withOpacity(0.22)
-                            : Colors.transparent,
-                        width: 1,
-                      ),
-                      boxShadow: sel
-                          ? [
-                              BoxShadow(
-                                color: C.primary.withOpacity(0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -2758,7 +2753,10 @@ class ScanPage extends StatefulWidget {
 }
 
 class _ScanPageState extends State<ScanPage>
-    with WidgetsBindingObserver, TickerProviderStateMixin {
+    with
+        WidgetsBindingObserver,
+        TickerProviderStateMixin,
+        AutomaticKeepAliveClientMixin {
   final _picker = ImagePicker();
   bool _busy = false;
   File? _previewFile;
@@ -2769,6 +2767,9 @@ class _ScanPageState extends State<ScanPage>
 
   late AnimationController _frameCtrl;
   late Animation<double> _frameAnim;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -2792,9 +2793,10 @@ class _ScanPageState extends State<ScanPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState s) {
-    if (_cam == null || !_cam!.value.isInitialized) return;
+    final cam = _cam;
+    if (cam == null || !cam.value.isInitialized) return;
     if (s == AppLifecycleState.inactive) {
-      _cam!.dispose();
+      cam.dispose();
       if (mounted) setState(() => _camReady = false);
     } else if (s == AppLifecycleState.resumed) {
       _initCam();
@@ -2819,10 +2821,9 @@ class _ScanPageState extends State<ScanPage>
               orElse: () => widget.cameras.first,
             )
           : widget.cameras.first;
-      // Higher resolution + center focus + center exposure
       final c = CameraController(
         camDesc,
-        ResolutionPreset.veryHigh,
+        ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: Platform.isIOS
             ? ImageFormatGroup.bgra8888
@@ -2841,7 +2842,6 @@ class _ScanPageState extends State<ScanPage>
         await c.setFocusMode(FocusMode.auto);
         await c.setExposureMode(ExposureMode.auto);
         await c.setFlashMode(FlashMode.off);
-        // Center metering for focus & exposure
         await c.setFocusPoint(const Offset(0.5, 0.5));
         await c.setExposurePoint(const Offset(0.5, 0.5));
       } catch (_) {}
@@ -2859,9 +2859,10 @@ class _ScanPageState extends State<ScanPage>
   }
 
   Future<void> _capture() async {
-    if (_cam == null || !_cam!.value.isInitialized || _busy) return;
+    final cam = _cam;
+    if (cam == null || !cam.value.isInitialized || _busy) return;
     try {
-      final f = await _cam!.takePicture();
+      final f = await cam.takePicture();
       await _process(File(f.path));
     } catch (e) {
       debugPrint('[Doma] capture error: $e');
@@ -2883,14 +2884,12 @@ class _ScanPageState extends State<ScanPage>
   Future<void> _process(File file) async {
     if (!mounted) return;
     setState(() => _busy = true);
-    await Future.delayed(const Duration(milliseconds: 80));
     try {
       final result = await widget.classifier.detect(file);
       if (!mounted) return;
-      setState(() => _busy = false);
-
       if (result.state == _ScanState.notFound || result.detections.isEmpty) {
-        if (mounted) _showDlg(const _NoCamoteDlg());
+        setState(() => _busy = false);
+        _showDlg(const _NoCamoteDlg());
         return;
       }
 
@@ -2905,6 +2904,8 @@ class _ScanPageState extends State<ScanPage>
         results: result.detections,
         timestamp: DateTime.now(),
       );
+      if (!mounted) return;
+      setState(() => _busy = false);
       widget.onResult(log);
     } catch (e, st) {
       debugPrint('[Doma] process error: $e\n$st');
@@ -2967,7 +2968,8 @@ class _ScanPageState extends State<ScanPage>
         ),
       );
     }
-    if (!_camReady || _cam == null) {
+    final cam = _cam;
+    if (!_camReady || cam == null) {
       return Container(
         color: C.primaryDeep,
         child: const Center(
@@ -2978,7 +2980,7 @@ class _ScanPageState extends State<ScanPage>
         ),
       );
     }
-    final preview = _cam!.value.previewSize;
+    final preview = cam.value.previewSize;
     if (preview == null) {
       return Container(
         color: C.primaryDeep,
@@ -2990,14 +2992,16 @@ class _ScanPageState extends State<ScanPage>
         ),
       );
     }
-    return OverflowBox(
-      alignment: Alignment.center,
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: preview.height,
-          height: preview.width,
-          child: CameraPreview(_cam!),
+    return RepaintBoundary(
+      child: OverflowBox(
+        alignment: Alignment.center,
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: preview.height,
+            height: preview.width,
+            child: CameraPreview(cam),
+          ),
         ),
       ),
     );
@@ -3005,6 +3009,7 @@ class _ScanPageState extends State<ScanPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Stack(
       children: [
         Scaffold(
@@ -3077,10 +3082,10 @@ class _ScanPageState extends State<ScanPage>
                       ),
                     ),
                     if (!_busy && _camReady && _camErr == null)
-                      AnimatedBuilder(
-                        animation: _frameAnim,
-                        builder: (_, __) => Positioned.fill(
-                          child: CustomPaint(
+                      RepaintBoundary(
+                        child: AnimatedBuilder(
+                          animation: _frameAnim,
+                          builder: (_, __) => CustomPaint(
                             painter: _ScanFramePainter(pulse: _frameAnim.value),
                           ),
                         ),
@@ -3122,7 +3127,7 @@ class _ScanPageState extends State<ScanPage>
   Widget _buildActionBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: C.surface,
         border: Border(top: BorderSide(color: C.border, width: 1)),
       ),
@@ -3188,23 +3193,9 @@ class _ScanActionState extends State<_ScanAction> {
               color: _pressed ? C.primary.withOpacity(0.1) : C.bg,
               shape: BoxShape.circle,
               border: Border.all(
-                color: _pressed ? C.primary : C.borderMid,
+                color: _pressed ? C.primary : C.border,
                 width: 1.4,
               ),
-              boxShadow: _pressed
-                  ? [
-                      BoxShadow(
-                        color: C.primary.withOpacity(0.15),
-                        blurRadius: 10,
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
             ),
             child: Icon(
               widget.icon,
@@ -3264,7 +3255,6 @@ class _CaptureButtonState extends State<_CaptureButton> {
             BoxShadow(
               color: C.primary.withOpacity(_pressed ? 0.5 : 0.25),
               blurRadius: _pressed ? 24 : 15,
-              spreadRadius: _pressed ? 2 : 0,
             ),
           ],
         ),
@@ -3282,14 +3272,14 @@ class _CaptureButtonState extends State<_CaptureButton> {
               ),
             ),
             child: widget.busy
-                ? Center(
+                ? const Center(
                     child: SizedBox(
                       width: 28,
                       height: 28,
                       child: CircularProgressIndicator(
                         color: Colors.white,
                         strokeWidth: 2.6,
-                        backgroundColor: Colors.white.withOpacity(0.25),
+                        backgroundColor: Colors.white24,
                       ),
                     ),
                   )
@@ -3581,7 +3571,7 @@ class ResultsPage extends StatefulWidget {
 }
 
 class _ResultsPageState extends State<ResultsPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   DetectionLog? _r;
   bool _saved = false;
   double? _imageWidth, _imageHeight;
@@ -3592,16 +3582,19 @@ class _ResultsPageState extends State<ResultsPage>
   final ScrollController _scroll = ScrollController();
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   void initState() {
     super.initState();
     _r = widget.result;
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 480),
+      duration: const Duration(milliseconds: 380),
     );
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.04),
+      begin: const Offset(0, 0.03),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
     if (_r != null) {
@@ -3650,8 +3643,8 @@ class _ResultsPageState extends State<ResultsPage>
     if (!await file.exists()) return;
     try {
       final bytes = await file.readAsBytes();
-      final img.Image? decoded = img.decodeImage(bytes);
-      if (decoded != null) {
+      final decoded = img.decodeImage(bytes);
+      if (decoded != null && mounted) {
         setState(() {
           _imageWidth = decoded.width.toDouble();
           _imageHeight = decoded.height.toDouble();
@@ -3664,7 +3657,7 @@ class _ResultsPageState extends State<ResultsPage>
     if (_r == null || _saved) return;
     await DetectionLogger.save(_r!);
     widget.onSaved?.call(_r!);
-    setState(() => _saved = true);
+    if (mounted) setState(() => _saved = true);
   }
 
   CamoteVariety? _v(String cls) {
@@ -3726,6 +3719,7 @@ class _ResultsPageState extends State<ResultsPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (_r == null || _r!.results.isEmpty) {
       return Scaffold(
         backgroundColor: C.bg,
@@ -3783,154 +3777,145 @@ class _ResultsPageState extends State<ResultsPage>
         opacity: _fade,
         child: SlideTransition(
           position: _slide,
-          child: Scrollbar(
+          child: SingleChildScrollView(
             controller: _scroll,
-            thumbVisibility: true,
-            thickness: 6,
-            radius: const Radius.circular(10),
-            child: SingleChildScrollView(
-              controller: _scroll,
-              child: Column(
-                children: [
-                  _HeroImage(
-                    imagePath: _r!.imagePath,
-                    dets: _r!.results,
-                    imageWidth: _imageWidth,
-                    imageHeight: _imageHeight,
-                    totalCount: totalCount,
-                    variantCount: variantCount,
-                    classes: uniqueClasses,
-                    selectedClass: selectedClass,
-                    onSelect: (c) => setState(() => _selectedClass = c),
+            child: Column(
+              children: [
+                _HeroImage(
+                  imagePath: _r!.imagePath,
+                  dets: _r!.results,
+                  imageWidth: _imageWidth,
+                  imageHeight: _imageHeight,
+                  totalCount: totalCount,
+                  variantCount: variantCount,
+                  classes: uniqueClasses,
+                  selectedClass: selectedClass,
+                  onSelect: (c) => setState(() => _selectedClass = c),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    C.paddingPage,
+                    C.paddingPage,
+                    C.paddingPage,
+                    28,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      C.paddingPage,
-                      C.paddingPage,
-                      C.paddingPage,
-                      28,
-                    ),
-                    child: Column(
-                      children: [
+                  child: Column(
+                    children: [
+                      _Stagger(
+                        index: 0,
+                        child: _DetectionSummaryCard(
+                          totalCount: totalCount,
+                          variantCount: variantCount,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _Stagger(
+                        index: 1,
+                        child: _IdentityCard(
+                          top: top,
+                          variety: variety,
+                          accentColor: accentColor,
+                          count: selectedCount,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (variety != null) ...[
                         _Stagger(
-                          index: 0,
-                          child: _DetectionSummaryCard(
-                            totalCount: totalCount,
-                            variantCount: variantCount,
+                          index: 2,
+                          child: _Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _SectionHeader('Overview', accent: accentColor),
+                                const SizedBox(height: 10),
+                                Text(
+                                  variety.description,
+                                  style: T.body.copyWith(
+                                    color: C.textPrimary,
+                                    height: 1.6,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),
                         _Stagger(
-                          index: 1,
-                          child: _IdentityCard(
-                            top: top,
-                            variety: variety,
+                          index: 3,
+                          child: _Card(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _SectionHeader(
+                                  'Characteristics',
+                                  accent: accentColor,
+                                ),
+                                const SizedBox(height: 4),
+                                const Divider(height: 1, color: C.border),
+                                _CharRow(
+                                  Icons.straighten,
+                                  'Shape',
+                                  variety.shape,
+                                ),
+                                const Divider(height: 1, color: C.border),
+                                _CharRow(
+                                  Icons.palette_outlined,
+                                  'Skin Color',
+                                  variety.skinColor,
+                                ),
+                                const Divider(height: 1, color: C.border),
+                                _CharRow(
+                                  Icons.circle_outlined,
+                                  'Flesh Color',
+                                  variety.fleshColor,
+                                ),
+                                const Divider(height: 1, color: C.border),
+                                _CharRow(
+                                  Icons.texture,
+                                  'Texture',
+                                  variety.texture,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _Stagger(
+                          index: 4,
+                          child: _IntakeCard(
+                            intake: variety.intake,
                             accentColor: accentColor,
-                            count: selectedCount,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        if (variety != null) ...[
-                          _Stagger(
-                            index: 2,
-                            child: _Card(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _SectionHeader(
-                                    'Overview',
-                                    accent: accentColor,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    variety.description,
-                                    style: T.body.copyWith(
-                                      color: C.textPrimary,
-                                      height: 1.6,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                        _Stagger(
+                          index: 5,
+                          child: _TargetedCard(
+                            people: variety.targetedPeople,
+                            accentColor: accentColor,
                           ),
-                          const SizedBox(height: 10),
-                          _Stagger(
-                            index: 3,
-                            child: _Card(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _SectionHeader(
-                                    'Characteristics',
-                                    accent: accentColor,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const Divider(height: 1, color: C.border),
-                                  _CharRow(
-                                    Icons.straighten,
-                                    'Shape',
-                                    variety.shape,
-                                  ),
-                                  const Divider(height: 1, color: C.border),
-                                  _CharRow(
-                                    Icons.palette_outlined,
-                                    'Skin Color',
-                                    variety.skinColor,
-                                  ),
-                                  const Divider(height: 1, color: C.border),
-                                  _CharRow(
-                                    Icons.circle_outlined,
-                                    'Flesh Color',
-                                    variety.fleshColor,
-                                  ),
-                                  const Divider(height: 1, color: C.border),
-                                  _CharRow(
-                                    Icons.texture,
-                                    'Texture',
-                                    variety.texture,
-                                  ),
-                                ],
-                              ),
-                            ),
+                        ),
+                        const SizedBox(height: 10),
+                        _Stagger(
+                          index: 6,
+                          child: _MedicalCard(
+                            medical: variety.medicalInfo,
+                            accentColor: accentColor,
                           ),
-                          const SizedBox(height: 10),
-                          _Stagger(
-                            index: 4,
-                            child: _IntakeCard(
-                              intake: variety.intake,
-                              accentColor: accentColor,
-                            ),
+                        ),
+                        const SizedBox(height: 10),
+                        _Stagger(
+                          index: 7,
+                          child: _RecipeRowCard(
+                            recipes: variety.recipes,
+                            accentColor: accentColor,
                           ),
-                          const SizedBox(height: 10),
-                          _Stagger(
-                            index: 5,
-                            child: _TargetedCard(
-                              people: variety.targetedPeople,
-                              accentColor: accentColor,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          _Stagger(
-                            index: 6,
-                            child: _MedicalCard(
-                              medical: variety.medicalInfo,
-                              accentColor: accentColor,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          _Stagger(
-                            index: 7,
-                            child: _RecipeRowCard(
-                              recipes: variety.recipes,
-                              accentColor: accentColor,
-                            ),
-                          ),
-                        ],
+                        ),
                       ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -3978,7 +3963,7 @@ class _HeroImageState extends State<_HeroImage>
     super.initState();
     _dimCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 340),
+      duration: const Duration(milliseconds: 300),
     );
     _dimAnim = CurvedAnimation(parent: _dimCtrl, curve: Curves.easeOutCubic);
     if (widget.selectedClass != null) _dimCtrl.value = 1.0;
@@ -4003,9 +3988,7 @@ class _HeroImageState extends State<_HeroImage>
   }
 
   void _onDragStart(DragStartDetails _) => _accumDx = 0;
-
   void _onDragUpdate(DragUpdateDetails d) => _accumDx += d.delta.dx;
-
   void _onDragEnd(DragEndDetails d) {
     if (widget.classes.length < 2) return;
     final v = d.primaryVelocity ?? 0;
@@ -4114,24 +4097,25 @@ class _HeroImageState extends State<_HeroImage>
                       alignment: Alignment.center,
                       filterQuality: FilterQuality.medium,
                     ),
-                    AnimatedBuilder(
-                      animation: _dimAnim,
-                      builder: (_, __) => CustomPaint(
-                        painter: _BBPainter(
-                          dets: widget.dets,
-                          imageWidth: widget.imageWidth,
-                          imageHeight: widget.imageHeight,
-                          highlight: widget.selectedClass,
-                          dim: _dimAnim.value,
-                          emphasiseSolo: widget.dets.length == 1,
+                    RepaintBoundary(
+                      child: AnimatedBuilder(
+                        animation: _dimAnim,
+                        builder: (_, __) => CustomPaint(
+                          painter: _BBPainter(
+                            dets: widget.dets,
+                            imageWidth: widget.imageWidth,
+                            imageHeight: widget.imageHeight,
+                            highlight: widget.selectedClass,
+                            dim: _dimAnim.value,
+                            emphasiseSolo: widget.dets.length == 1,
+                          ),
                         ),
                       ),
                     ),
                     Positioned(
                       top: 14,
                       left: 14,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 260),
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 8,
@@ -4145,13 +4129,6 @@ class _HeroImageState extends State<_HeroImage>
                             color: Colors.white.withOpacity(0.14),
                             width: 1,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -4213,7 +4190,7 @@ class _Dots extends StatelessWidget {
           final active = e.key == current;
           final color = _accent(e.value);
           return AnimatedContainer(
-            duration: const Duration(milliseconds: 280),
+            duration: const Duration(milliseconds: 240),
             curve: Curves.easeOutCubic,
             margin: const EdgeInsets.symmetric(horizontal: 4),
             width: active ? 24 : 8,
@@ -4221,15 +4198,6 @@ class _Dots extends StatelessWidget {
             decoration: BoxDecoration(
               color: active ? color : C.border,
               borderRadius: BorderRadius.circular(4),
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                        color: color.withOpacity(0.35),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : null,
             ),
           );
         }).toList(),
@@ -4257,13 +4225,6 @@ class _DetectionSummaryCard extends StatelessWidget {
                   colors: [C.primaryMid, C.primary],
                 ),
                 borderRadius: BorderRadius.circular(11),
-                boxShadow: [
-                  BoxShadow(
-                    color: C.primary.withOpacity(0.28),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
               ),
               child: const Icon(
                 Icons.center_focus_strong_outlined,
@@ -4323,13 +4284,6 @@ class _IdentityCard extends StatelessWidget {
                   ],
                 ),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: accentColor.withOpacity(0.32),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
               ),
             ),
             const SizedBox(width: 14),
@@ -4535,44 +4489,44 @@ class _TargetedCard extends StatelessWidget {
           children: [
             _SectionHeader('Best Suited For', accent: accentColor),
             const SizedBox(height: 12),
-            ...people.asMap().entries.map(
-                  (e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 24,
-                          height: 24,
-                          margin: const EdgeInsets.only(top: 2),
-                          decoration: BoxDecoration(
-                            color: accentColor.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(7),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.person_outline,
-                              size: 13,
-                              color: accentColor,
-                            ),
-                          ),
+            ...people.map(
+              (p) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      margin: const EdgeInsets.only(top: 2),
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.person_outline,
+                          size: 13,
+                          color: accentColor,
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            e.value,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: C.textPrimary,
-                              fontWeight: FontWeight.w500,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        p,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: C.textPrimary,
+                          fontWeight: FontWeight.w500,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ),
           ],
         ),
       );
@@ -4824,14 +4778,6 @@ class _RecipeCarouselCardState extends State<_RecipeCarouselCard> {
             color: _pressed ? accent.withOpacity(0.5) : C.border,
             width: _pressed ? 1.5 : 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  _pressed ? accent.withOpacity(0.22) : const Color(0x0F000000),
-              blurRadius: _pressed ? 16 : 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(C.radiusInner - 1),
@@ -4880,9 +4826,6 @@ class _RecipeCarouselCardState extends State<_RecipeCarouselCard> {
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.55),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.16),
-                          ),
                         ),
                         child: Text(
                           r.difficulty,
@@ -5241,51 +5184,48 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                       ),
                       const SizedBox(height: 14),
                       ...r.ingredients.asMap().entries.map(
-                            (e) => _Stagger(
-                              index: e.key,
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: C.bg,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: C.border),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        color: accent,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          '${e.key + 1}',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
-                                          ),
+                            (e) => Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: C.bg,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: C.border),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 26,
+                                    height: 26,
+                                    decoration: BoxDecoration(
+                                      color: accent,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${e.key + 1}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          e.value,
-                                          style: T.body.copyWith(
-                                            color: C.textPrimary,
-                                          ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        e.value,
+                                        style: T.body.copyWith(
+                                          color: C.textPrimary,
                                         ),
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -5304,83 +5244,74 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                       const SizedBox(height: 16),
                       ...r.steps.asMap().entries.map((e) {
                         final isLast = e.key == r.steps.length - 1;
-                        return _Stagger(
-                          index: e.key,
-                          child: IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SizedBox(
-                                  width: 34,
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 30,
-                                        height: 30,
-                                        decoration: BoxDecoration(
-                                          color: accent,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: accent.withOpacity(0.28),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            '${e.key + 1}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      if (!isLast)
-                                        Expanded(
-                                          child: Container(
-                                            width: 2,
-                                            margin: const EdgeInsets.symmetric(
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: accent.withOpacity(0.25),
-                                              borderRadius:
-                                                  BorderRadius.circular(2),
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom: isLast ? 0 : 16,
-                                    ),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(12),
+                        return IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SizedBox(
+                                width: 34,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      width: 30,
+                                      height: 30,
                                       decoration: BoxDecoration(
-                                        color: C.bg,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: C.border),
+                                        color: accent,
+                                        shape: BoxShape.circle,
                                       ),
-                                      child: Text(
-                                        e.value,
-                                        style: T.body.copyWith(
-                                          color: C.textPrimary,
-                                          height: 1.55,
+                                      child: Center(
+                                        child: Text(
+                                          '${e.key + 1}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w800,
+                                          ),
                                         ),
+                                      ),
+                                    ),
+                                    if (!isLast)
+                                      Expanded(
+                                        child: Container(
+                                          width: 2,
+                                          margin: const EdgeInsets.symmetric(
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: accent.withOpacity(0.25),
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: isLast ? 0 : 16,
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: C.bg,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: C.border),
+                                    ),
+                                    child: Text(
+                                      e.value,
+                                      style: T.body.copyWith(
+                                        color: C.textPrimary,
+                                        height: 1.55,
                                       ),
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         );
                       }),
@@ -5397,61 +5328,49 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet>
                         accent: accent,
                       ),
                       const SizedBox(height: 14),
-                      ...r.tips.asMap().entries.map(
-                            (e) => _Stagger(
-                              index: e.key,
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.all(14),
+                      ...r.tips.map(
+                        (tip) => Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: accent.withOpacity(0.06),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: accent.withOpacity(0.22)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(7),
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      accent.withOpacity(0.09),
-                                      accent.withOpacity(0.03),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: accent.withOpacity(0.22),
-                                  ),
+                                  color: accent,
+                                  borderRadius: BorderRadius.circular(9),
                                 ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(7),
-                                      decoration: BoxDecoration(
-                                        color: accent,
-                                        borderRadius: BorderRadius.circular(9),
-                                      ),
-                                      child: const Icon(
-                                        Icons.lightbulb,
-                                        color: Colors.white,
-                                        size: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(top: 3),
-                                        child: Text(
-                                          e.value,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: C.textPrimary,
-                                            height: 1.55,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                child: const Icon(
+                                  Icons.lightbulb,
+                                  color: Colors.white,
+                                  size: 14,
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(
+                                    tip,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: C.textPrimary,
+                                      height: 1.55,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
+                        ),
+                      ),
                       Container(
                         margin: const EdgeInsets.only(top: 6),
                         padding: const EdgeInsets.all(14),
@@ -5569,9 +5488,14 @@ class DetectionsPage extends StatefulWidget {
   State<DetectionsPage> createState() => _DetectionsPageState();
 }
 
-class _DetectionsPageState extends State<DetectionsPage> {
+class _DetectionsPageState extends State<DetectionsPage>
+    with AutomaticKeepAliveClientMixin {
   List<DetectionLog> _logs = [];
   bool _loading = true;
+
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
@@ -5579,9 +5503,12 @@ class _DetectionsPageState extends State<DetectionsPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
-    _logs = await DetectionLogger.load();
-    setState(() => _loading = false);
+    final logs = await DetectionLogger.load();
+    if (!mounted) return;
+    setState(() {
+      _logs = logs;
+      _loading = false;
+    });
   }
 
   void add(DetectionLog log) {
@@ -5674,6 +5601,7 @@ class _DetectionsPageState extends State<DetectionsPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       backgroundColor: C.bg,
       appBar: _appBar('Detections'),
@@ -5696,9 +5624,9 @@ class _DetectionsPageState extends State<DetectionsPage> {
               borderRadius: BorderRadius.circular(C.radiusCard),
               boxShadow: [
                 BoxShadow(
-                  color: C.primary.withOpacity(0.28),
-                  blurRadius: 14,
-                  offset: const Offset(0, 5),
+                  color: C.primary.withOpacity(0.25),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -5828,12 +5756,9 @@ class _DetectionsPageState extends State<DetectionsPage> {
                           itemCount: _logs.length,
                           itemBuilder: (_, i) {
                             final log = _logs[i];
-                            return _Stagger(
-                              index: i > 5 ? 5 : i,
-                              child: _DetectionCard(
-                                log: log,
-                                onTap: () => _detail(log),
-                              ),
+                            return _DetectionCard(
+                              log: log,
+                              onTap: () => _detail(log),
                             );
                           },
                         ),
@@ -6227,82 +6152,71 @@ class _DetailSheetState extends State<_DetailSheet> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ...log.results.asMap().entries.map((e) {
-                    final d = e.value;
+                  ...log.results.map((d) {
                     final variety = _v(d.className);
                     final color = _accent(d.className);
-                    return _Stagger(
-                      index: e.key,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _Card(
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 46,
-                                height: 46,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      color,
-                                      Color.lerp(color, Colors.black, 0.25)!,
-                                    ],
-                                  ),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: color.withOpacity(0.28),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _Card(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    color,
+                                    Color.lerp(color, Colors.black, 0.25)!,
                                   ],
                                 ),
+                                shape: BoxShape.circle,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    variety?.name ?? d.className.cap,
+                                    style: T.subhead,
+                                  ),
+                                  if (variety != null)
                                     Text(
-                                      variety?.name ?? d.className.cap,
-                                      style: T.subhead,
-                                    ),
-                                    if (variety != null)
-                                      Text(
-                                        variety.commonName,
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: color,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                      variety.commonName,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: color,
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                  ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: color.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(
+                                  C.radiusPill,
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: color.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(
-                                    C.radiusPill,
-                                  ),
-                                ),
-                                child: Text(
-                                  '${(d.confidence * 100).toStringAsFixed(0)}%',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: color,
-                                  ),
+                              child: Text(
+                                '${(d.confidence * 100).toStringAsFixed(0)}%',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: color,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -6398,40 +6312,34 @@ class LibraryPage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: C.bg,
         appBar: _appBar('Library'),
-        body: SingleChildScrollView(
+        body: ListView.builder(
           padding: const EdgeInsets.fromLTRB(
             C.paddingPage,
             C.paddingPage,
             C.paddingPage,
             28,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Stagger(
-                index: 0,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Camote Varieties', style: T.display),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Explore the four varieties grown locally in Leyte. '
-                        'Tap any card to open the full guide.',
-                        style: T.body,
-                      ),
-                    ],
-                  ),
+          itemCount: camoteVarieties.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Camote Varieties', style: T.display),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Explore the four varieties grown locally in Leyte. '
+                      'Tap any card to open the full guide.',
+                      style: T.body,
+                    ),
+                  ],
                 ),
-              ),
-              ...camoteVarieties.asMap().entries.map(
-                    (e) => _Stagger(
-                        index: e.key + 1, child: _VarietyCard(e.value)),
-                  ),
-            ],
-          ),
+              );
+            }
+            return _VarietyCard(camoteVarieties[index - 1]);
+          },
         ),
       );
 }
@@ -6453,8 +6361,8 @@ class _VarietyCard extends StatelessWidget {
             border: Border.all(color: C.border),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x0A000000),
-                blurRadius: 12,
+                color: Color(0x06000000),
+                blurRadius: 16,
                 offset: Offset(0, 4),
               ),
             ],
@@ -6514,9 +6422,6 @@ class _VarietyCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.55),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.16),
-                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -6889,174 +6794,151 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                     controller: sc,
                     padding: const EdgeInsets.all(C.paddingPage),
                     children: [
-                      _Stagger(
-                        index: 0,
-                        child: _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeader(
-                                'Per 100 g Serving',
-                                accent: accentColor,
-                              ),
-                              const SizedBox(height: 14),
-                              _NutGrid(
-                                accentColor: accentColor,
-                                items: [
-                                  (
-                                    'Calories',
-                                    v.medicalInfo.calories100g,
-                                    Icon(
-                                      Icons.local_fire_department,
-                                      size: 15,
-                                      color: accentColor,
-                                    ),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionHeader(
+                              'Per 100 g Serving',
+                              accent: accentColor,
+                            ),
+                            const SizedBox(height: 14),
+                            _NutGrid(
+                              accentColor: accentColor,
+                              items: [
+                                (
+                                  'Calories',
+                                  v.medicalInfo.calories100g,
+                                  Icon(
+                                    Icons.local_fire_department,
+                                    size: 15,
+                                    color: accentColor,
                                   ),
-                                  (
-                                    'Carbs',
-                                    v.medicalInfo.carbs100g,
-                                    Icon(
-                                      Icons.grain,
-                                      size: 15,
-                                      color: accentColor,
-                                    ),
+                                ),
+                                (
+                                  'Carbs',
+                                  v.medicalInfo.carbs100g,
+                                  Icon(
+                                    Icons.grain,
+                                    size: 15,
+                                    color: accentColor,
                                   ),
-                                  (
-                                    'Fiber',
-                                    v.medicalInfo.fiber,
-                                    Icon(
-                                      Icons.spa,
-                                      size: 15,
-                                      color: accentColor,
-                                    ),
+                                ),
+                                (
+                                  'Fiber',
+                                  v.medicalInfo.fiber,
+                                  Icon(Icons.spa, size: 15, color: accentColor),
+                                ),
+                                (
+                                  'Potassium',
+                                  v.medicalInfo.potassium,
+                                  Icon(
+                                    Icons.bolt,
+                                    size: 15,
+                                    color: accentColor,
                                   ),
-                                  (
-                                    'Potassium',
-                                    v.medicalInfo.potassium,
-                                    Icon(
-                                      Icons.bolt,
-                                      size: 15,
-                                      color: accentColor,
-                                    ),
+                                ),
+                                (
+                                  'Vitamin A',
+                                  v.medicalInfo.vitaminA,
+                                  Icon(
+                                    Icons.visibility,
+                                    size: 15,
+                                    color: accentColor,
                                   ),
-                                  (
-                                    'Vitamin A',
-                                    v.medicalInfo.vitaminA,
-                                    Icon(
-                                      Icons.visibility,
-                                      size: 15,
-                                      color: accentColor,
-                                    ),
-                                  ),
-                                  (
-                                    'Vitamin C',
-                                    v.medicalInfo.vitaminC,
-                                    Icon(
-                                      Icons.eco,
-                                      size: 15,
-                                      color: accentColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                                ),
+                                (
+                                  'Vitamin C',
+                                  v.medicalInfo.vitaminC,
+                                  Icon(Icons.eco, size: 15, color: accentColor),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _Stagger(
-                        index: 1,
-                        child: _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeader(
-                                'Glycaemic Profile',
-                                accent: accentColor,
-                              ),
-                              const SizedBox(height: 12),
-                              _giRow(
-                                'Glycaemic Index',
-                                v.medicalInfo.glycemicIndex,
-                                accentColor,
-                              ),
-                              _giRow(
-                                'Glycaemic Load',
-                                v.medicalInfo.glycemicLoad,
-                                accentColor,
-                              ),
-                            ],
-                          ),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionHeader(
+                              'Glycaemic Profile',
+                              accent: accentColor,
+                            ),
+                            const SizedBox(height: 12),
+                            _giRow(
+                              'Glycaemic Index',
+                              v.medicalInfo.glycemicIndex,
+                              accentColor,
+                            ),
+                            _giRow(
+                              'Glycaemic Load',
+                              v.medicalInfo.glycemicLoad,
+                              accentColor,
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _Stagger(
-                        index: 2,
-                        child: _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeader(
-                                'Medicinal Uses',
-                                accent: accentColor,
-                              ),
-                              const SizedBox(height: 10),
-                              ...v.medicalInfo.medicinalUses.map(
-                                (u) => _bullet(u, C.primary),
-                              ),
-                            ],
-                          ),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionHeader(
+                              'Medicinal Uses',
+                              accent: accentColor,
+                            ),
+                            const SizedBox(height: 10),
+                            ...v.medicalInfo.medicinalUses.map(
+                              (u) => _bullet(u, C.primary),
+                            ),
+                          ],
                         ),
                       ),
                       if (v.medicalInfo.drugInteractions.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        _Stagger(
-                          index: 3,
-                          child: _Card(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _SectionHeader(
-                                  'Drug Interactions',
-                                  accent: C.warn,
-                                  trailing: _Pill(
-                                    'Consult a doctor',
-                                    bg: C.warnLight,
-                                    fg: C.warn,
-                                  ),
+                        _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SectionHeader(
+                                'Drug Interactions',
+                                accent: C.warn,
+                                trailing: const _Pill(
+                                  'Consult a doctor',
+                                  bg: C.warnLight,
+                                  fg: C.warn,
                                 ),
-                                const SizedBox(height: 10),
-                                ...v.medicalInfo.drugInteractions.map(
-                                  (d) => _warnItem(d, C.warn, C.warnLight),
-                                ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 10),
+                              ...v.medicalInfo.drugInteractions.map(
+                                (d) => _warnItem(d, C.warn, C.warnLight),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                       if (v.medicalInfo.contraindications.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        _Stagger(
-                          index: 4,
-                          child: _Card(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _SectionHeader(
-                                  'Contraindications',
-                                  accent: C.err,
-                                  trailing: _Pill(
-                                    'Important',
-                                    bg: C.errLight,
-                                    fg: C.err,
-                                  ),
+                        _Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SectionHeader(
+                                'Contraindications',
+                                accent: C.err,
+                                trailing: const _Pill(
+                                  'Important',
+                                  bg: C.errLight,
+                                  fg: C.err,
                                 ),
-                                const SizedBox(height: 10),
-                                ...v.medicalInfo.contraindications.map(
-                                  (d) => _warnItem(d, C.err, C.errLight),
-                                ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 10),
+                              ...v.medicalInfo.contraindications.map(
+                                (d) => _warnItem(d, C.err, C.errLight),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -7066,261 +6948,224 @@ class _LibraryDetailSheetState extends State<_LibraryDetailSheet>
                     controller: sc,
                     padding: const EdgeInsets.all(C.paddingPage),
                     children: [
-                      _Stagger(
-                        index: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                accentColor,
-                                Color.lerp(accentColor, Colors.black, 0.2)!,
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              accentColor,
+                              Color.lerp(accentColor, Colors.black, 0.2)!,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(C.radiusCard),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.monitor_heart_outlined,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Recommended Intake',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ],
                             ),
-                            borderRadius: BorderRadius.circular(C.radiusCard),
-                            boxShadow: [
-                              BoxShadow(
-                                color: accentColor.withOpacity(0.28),
-                                blurRadius: 14,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.monitor_heart_outlined,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'Recommended Intake',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              Row(
-                                children: [
-                                  _intakeHero('Daily Max', v.intake.dailyMax),
-                                  const SizedBox(width: 10),
-                                  _intakeHero('Weekly Max', v.intake.weeklyMax),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  _intakeHero(
-                                    'Serving Size',
-                                    v.intake.servingSize,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  _intakeHero('Best Time', v.intake.bestTime),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _Stagger(
-                        index: 1,
-                        child: _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeader(
-                                'Limitations',
-                                accent: C.warn,
-                                trailing: const Icon(
-                                  Icons.block,
-                                  size: 16,
-                                  color: C.warn,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              ...v.intake.limitations.map(
-                                (l) => _warnItem(l, C.warn, C.warnLight),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _Stagger(
-                        index: 2,
-                        child: _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeader(
-                                'General Cautions',
-                                accent: accentColor,
-                                trailing: const Icon(
-                                  Icons.info_outline,
-                                  size: 16,
-                                  color: C.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              ...v.intake.cautions.map(
-                                (c) => _warnItem(c, C.warn, C.warnLight),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _Stagger(
-                        index: 3,
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: C.primaryLight,
-                            borderRadius: BorderRadius.circular(C.radiusCard),
-                            border: Border.all(
-                              color: C.primary.withOpacity(0.18),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                _intakeHero('Daily Max', v.intake.dailyMax),
+                                const SizedBox(width: 10),
+                                _intakeHero('Weekly Max', v.intake.weeklyMax),
+                              ],
                             ),
-                          ),
-                          child: const Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.health_and_safety_outlined,
-                                color: C.primary,
-                                size: 20,
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                _intakeHero(
+                                  'Serving Size',
+                                  v.intake.servingSize,
+                                ),
+                                const SizedBox(width: 10),
+                                _intakeHero('Best Time', v.intake.bestTime),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionHeader(
+                              'Limitations',
+                              accent: C.warn,
+                              trailing: const Icon(
+                                Icons.block,
+                                size: 16,
+                                color: C.warn,
                               ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Consult a nutritionist or physician before major dietary changes.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: C.primary,
-                                    height: 1.5,
-                                  ),
+                            ),
+                            const SizedBox(height: 10),
+                            ...v.intake.limitations.map(
+                              (l) => _warnItem(l, C.warn, C.warnLight),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionHeader(
+                              'General Cautions',
+                              accent: accentColor,
+                              trailing: const Icon(
+                                Icons.info_outline,
+                                size: 16,
+                                color: C.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            ...v.intake.cautions.map(
+                              (c) => _warnItem(c, C.warn, C.warnLight),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: C.primaryLight,
+                          borderRadius: BorderRadius.circular(C.radiusCard),
+                          border: Border.all(
+                            color: C.primary.withOpacity(0.18),
+                          ),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.health_and_safety_outlined,
+                              color: C.primary,
+                              size: 20,
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Consult a nutritionist or physician before major dietary changes.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: C.primary,
+                                  height: 1.5,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  ListView(
+                  ListView.builder(
                     controller: sc,
                     padding: const EdgeInsets.all(C.paddingPage),
-                    children: v.recipes
-                        .asMap()
-                        .entries
-                        .map(
-                          (e) => _Stagger(
-                            index: e.key,
-                            child: _ExpandableRecipeCard(
-                              recipe: e.value,
-                              accentColor: accentColor,
-                            ),
-                          ),
-                        )
-                        .toList(),
+                    itemCount: v.recipes.length,
+                    itemBuilder: (_, i) => _ExpandableRecipeCard(
+                      recipe: v.recipes[i],
+                      accentColor: accentColor,
+                    ),
                   ),
                   ListView(
                     controller: sc,
                     padding: const EdgeInsets.all(C.paddingPage),
                     children: [
-                      _Stagger(
-                        index: 0,
-                        child: _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeader(
-                                'Recommended For',
-                                accent: accentColor,
-                                trailing: _Pill(
-                                  '${v.targetedPeople.length} groups',
-                                  bg: accentColor.withOpacity(0.1),
-                                  fg: accentColor,
-                                ),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionHeader(
+                              'Recommended For',
+                              accent: accentColor,
+                              trailing: _Pill(
+                                '${v.targetedPeople.length} groups',
+                                bg: accentColor.withOpacity(0.1),
+                                fg: accentColor,
                               ),
-                              const SizedBox(height: 12),
-                              ...v.targetedPeople.asMap().entries.map(
-                                    (e) => Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 10),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Container(
-                                            width: 30,
-                                            height: 30,
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  accentColor.withOpacity(0.12),
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                8,
-                                              ),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                '${e.key + 1}',
-                                                style: TextStyle(
-                                                  color: accentColor,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w800,
-                                                ),
+                            ),
+                            const SizedBox(height: 12),
+                            ...v.targetedPeople.asMap().entries.map(
+                                  (e) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          width: 30,
+                                          height: 30,
+                                          decoration: BoxDecoration(
+                                            color:
+                                                accentColor.withOpacity(0.12),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '${e.key + 1}',
+                                              style: TextStyle(
+                                                color: accentColor,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w800,
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: 6,
-                                              ),
-                                              child: Text(
-                                                e.value,
-                                                style: T.body.copyWith(
-                                                  color: C.textPrimary,
-                                                ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 6),
+                                            child: Text(
+                                              e.value,
+                                              style: T.body.copyWith(
+                                                color: C.textPrimary,
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                            ],
-                          ),
+                                ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _Stagger(
-                        index: 1,
-                        child: _Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SectionHeader(
-                                'Health Benefits',
-                                accent: accentColor,
-                              ),
-                              const SizedBox(height: 10),
-                              ...v.benefits.map((b) => _bullet(b, accentColor)),
-                            ],
-                          ),
+                      _Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionHeader(
+                              'Health Benefits',
+                              accent: accentColor,
+                            ),
+                            const SizedBox(height: 10),
+                            ...v.benefits.map((b) => _bullet(b, accentColor)),
+                          ],
                         ),
                       ),
                     ],
@@ -7400,30 +7245,37 @@ class _NutGrid extends StatelessWidget {
   const _NutGrid({required this.accentColor, required this.items});
 
   @override
-  Widget build(BuildContext context) => GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 2.6,
-        children: items
-            .map(
-              (it) => Container(
-                padding: const EdgeInsets.all(10),
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 10.0;
+        final cellW = (constraints.maxWidth - spacing) / 2;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: items.map((it) {
+            return SizedBox(
+              width: cellW,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: accentColor.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(C.radiusInner),
                   border: Border.all(color: accentColor.withOpacity(0.16)),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      width: 28,
-                      height: 28,
+                      width: 30,
+                      height: 30,
                       decoration: BoxDecoration(
                         color: accentColor.withOpacity(0.14),
-                        borderRadius: BorderRadius.circular(7),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(child: it.$3),
                     ),
@@ -7431,27 +7283,29 @@ class _NutGrid extends StatelessWidget {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             it.$1,
                             style: TextStyle(
-                              fontSize: 9.5,
+                              fontSize: 10,
                               color: accentColor.withOpacity(0.85),
                               fontWeight: FontWeight.w600,
+                              height: 1.2,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 1),
+                          const SizedBox(height: 2),
                           Text(
                             it.$2,
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                               color: accentColor,
+                              height: 1.2,
                             ),
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -7460,9 +7314,12 @@ class _NutGrid extends StatelessWidget {
                   ],
                 ),
               ),
-            )
-            .toList(),
-      );
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
 }
 
 class _ExpandableRecipeCard extends StatefulWidget {
@@ -7487,7 +7344,7 @@ class _ExpandableRecipeCardState extends State<_ExpandableRecipeCard> {
     return GestureDetector(
       onTap: () => setState(() => _expanded = !_expanded),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 280),
+        duration: const Duration(milliseconds: 260),
         curve: Curves.easeOutCubic,
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
@@ -7497,14 +7354,6 @@ class _ExpandableRecipeCardState extends State<_ExpandableRecipeCard> {
             color: _expanded ? accent.withOpacity(0.35) : C.border,
             width: _expanded ? 1.5 : 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  _expanded ? accent.withOpacity(0.1) : const Color(0x0A000000),
-              blurRadius: _expanded ? 14 : 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(15),
